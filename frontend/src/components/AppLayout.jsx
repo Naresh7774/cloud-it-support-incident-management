@@ -6,8 +6,8 @@ const AppLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {/* Responsive Collapsible Sidebar */}
+    <div className="min-h-screen bg-navy-900 text-dark-light flex selection:bg-brand-primary/30">
+      {/* Responsive Collapsible Dark Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content Area */}

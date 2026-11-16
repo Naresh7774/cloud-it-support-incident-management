@@ -91,8 +91,8 @@ const ticketController = {
       if (req.user.role === 'user') {
         // Regular users can only see their own tickets
         filter.createdBy = req.user.id;
-      } else if (req.user.role === 'engineer') {
-        if (queue === 'mine') {
+      } else if (req.user.role === 'engineer' || req.user.role === 'admin') {
+        if (queue === 'mine' || queue === 'assigned') {
           filter.assignedTo = req.user.id;
         } else if (queue === 'unassigned') {
           filter.unassignedOnly = true;

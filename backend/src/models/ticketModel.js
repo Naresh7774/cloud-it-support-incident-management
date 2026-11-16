@@ -218,7 +218,7 @@ const ticketModel = {
     return result.affectedRows > 0;
   },
 
-  async getStatistics({ userId = null, role = 'admin' } = {}) {
+  async getStatistics({ userId = null, role = 'admin', dateRange = null } = {}) {
     let baseWhere = '1=1';
     const params = [];
 
@@ -228,6 +228,14 @@ const ticketModel = {
     } else if (role === 'engineer' && userId) {
       baseWhere += ' AND (assigned_to = ? OR assigned_to IS NULL)';
       params.push(userId);
+    }
+
+    if (dateRange === 'today') {
+      baseWhere += ' AND created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 DAY)';
+    } else if (dateRange === '7d') {
+      baseWhere += ' AND created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY)';
+    } else if (dateRange === '30d') {
+      baseWhere += ' AND created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY)';
     }
 
     // 1. Overall counts by status and overdue

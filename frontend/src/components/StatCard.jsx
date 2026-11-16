@@ -2,38 +2,41 @@ import React from 'react';
 
 const StatCard = ({ title, count, icon: Icon, color = 'blue', alert = false, subtitle }) => {
   const colorMap = {
-    blue: 'bg-sky-50 text-sky-600 border-sky-100',
-    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-    purple: 'bg-purple-50 text-purple-600 border-purple-100',
-    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    red: 'bg-red-50 text-red-600 border-red-200',
-    amber: 'bg-amber-50 text-amber-600 border-amber-100',
-    slate: 'bg-slate-50 text-slate-600 border-slate-100',
+    blue: 'bg-brand-primary/10 text-brand-accent border-brand-primary/20',
+    cyan: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    indigo: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+    purple: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    red: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    slate: 'bg-slate-700/20 text-slate-300 border-slate-600/30',
   };
 
   const badgeClass = colorMap[color] || colorMap.blue;
 
   return (
     <div
-      className={`bg-white rounded-xl p-5 shadow-sm border transition hover:shadow-md ${
-        alert ? 'border-red-300 ring-2 ring-red-100' : 'border-slate-200'
+      className={`bg-dark-card rounded-2xl p-5 shadow-lg border transition-all duration-200 group hover:-translate-y-0.5 hover:shadow-xl ${
+        alert
+          ? 'border-rose-500/40 ring-1 ring-rose-500/30'
+          : 'border-dark-border hover:border-brand-primary/40'
       }`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-500">{title}</span>
-        <div className={`p-2 rounded-lg border ${badgeClass}`}>
-          <Icon className="w-5 h-5" />
+        <span className="text-xs font-semibold text-dark-muted tracking-wider uppercase">{title}</span>
+        <div className={`p-2.5 rounded-xl border ${badgeClass} group-hover:scale-110 transition-transform`}>
+          <Icon className="w-4 h-4" />
         </div>
       </div>
       <div className="mt-3 flex items-baseline gap-2">
-        <span className="text-2xl font-bold text-slate-900">{count ?? 0}</span>
+        <span className="text-2xl font-black text-white tracking-tight">{count ?? 0}</span>
         {alert && (
-          <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
-            Action Needed
+          <span className="text-[10px] font-bold text-rose-300 bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
+            Attention
           </span>
         )}
       </div>
-      {subtitle && <p className="mt-1 text-xs text-slate-400">{subtitle}</p>}
+      {subtitle && <p className="mt-1 text-[11px] text-slate-400">{subtitle}</p>}
     </div>
   );
 };

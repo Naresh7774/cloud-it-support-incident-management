@@ -1,109 +1,142 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ShieldAlert, LogIn, AlertCircle, KeyRound, UserCheck } from 'lucide-react';
+import { ShieldAlert, LogIn, AlertCircle, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      setError('Please provide both your work email and password.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const user = await login(email, password);
-      // Route user to appropriate portal
-      if (user.role === 'admin') navigate('/admin');
-      else if (user.role === 'engineer') navigate('/engineer');
-      else navigate('/dashboard');
+      const user = await login(trimmedEmail, password);
+      // Route strictly based on backend-authenticated user role
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      } else if (user.role === 'engineer') {
+        navigate('/engineer/dashboard', { replace: true });
+      } else {
+        navigate('/user/dashboard', { replace: true });
+      }
     } catch (err) {
-      setError(typeof err === 'string' ? err : 'Invalid email or password');
+      setError(typeof err === 'string' ? err : err.message || 'Invalid email or password.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Demo account quick filler
-  const setDemoAccount = (role) => {
-    if (role === 'admin') {
-      setEmail('admin@cloudsupport.local');
-      setPassword('Admin@123');
-    } else if (role === 'engineer') {
-      setEmail('engineer@cloudsupport.local');
-      setPassword('Engineer@123');
-    } else {
-      setEmail('user@cloudsupport.local');
-      setPassword('User@123');
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-navy-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 selection:bg-brand-primary/30">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex bg-sky-600 text-white p-3 rounded-2xl shadow-md mb-3">
-          <ShieldAlert className="w-8 h-8" />
+        {/* Brand Logo & Header */}
+        <div className="inline-flex bg-gradient-to-br from-brand-primary to-blue-700 text-white p-3.5 rounded-2xl shadow-lg shadow-brand-primary/20 mb-4 border border-blue-400/20">
+          <ShieldAlert className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Cloud Incident<span className="text-sky-600">Ops</span>
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Cloud IT Support & Incident Management Platform
+        <h1 className="text-2xl font-black text-white tracking-tight">
+          Cloud Incident<span className="text-brand-accent">Ops</span>
+        </h1>
+        <p className="mt-1.5 text-xs text-dark-muted font-medium uppercase tracking-widest">
+          Enterprise ITSM & Incident Management System
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-sm border border-slate-200 sm:rounded-2xl sm:px-10">
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
+        <div className="bg-dark-card py-8 px-6 shadow-2xl rounded-2xl border border-dark-border sm:px-10">
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-white tracking-tight">Account Sign In</h2>
+            <p className="text-xs text-dark-muted mt-0.5">
+              Enter your credentials to access your organization portal.
+            </p>
+          </div>
+
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{error}</span>
+            <div className="mb-5 bg-rose-950/40 border border-rose-500/30 text-rose-300 px-4 py-3 rounded-xl text-xs flex items-center gap-2.5 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+              <span className="font-medium">{error}</span>
             </div>
           )}
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit} autoComplete="off">
+            {/* Work Email Field */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                Work Email
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                Work Email Address
               </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
-                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="user@organization.com"
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-navy-900 border border-dark-border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition"
+                />
+              </div>
             </div>
 
+            {/* Password Field with Show/Hide Control */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
                 Password
               </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full pl-10 pr-10 py-2.5 bg-navy-900 border border-dark-border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-white transition focus:outline-none"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50 transition"
+              className="w-full mt-2 flex justify-center items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-bold text-white bg-brand-primary hover:bg-brand-primaryHover focus:outline-none focus:ring-2 focus:ring-brand-primary/50 shadow-lg shadow-brand-primary/25 disabled:opacity-50 transition"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-b-white"></div>
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
@@ -113,43 +146,19 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Quick Demo Logins */}
-          <div className="mt-6 pt-5 border-t border-slate-100">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2 text-center">
-              Quick Test Credentials
-            </span>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setDemoAccount('admin')}
-                className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition"
-              >
-                Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoAccount('engineer')}
-                className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
-              >
-                Engineer
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoAccount('user')}
-                className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition"
-              >
-                End User
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-6 text-center text-xs text-slate-500">
-            Don't have an account?{' '}
-            <Link to="/register" className="font-semibold text-sky-600 hover:text-sky-700">
-              Register here
+          {/* Registration Link */}
+          <div className="mt-6 pt-5 border-t border-dark-border text-center text-xs text-dark-muted">
+            Need an account?{' '}
+            <Link to="/register" className="font-semibold text-brand-accent hover:text-cyan-300 transition">
+              Register for portal access
             </Link>
           </div>
         </div>
+
+        {/* Security Notice Footer */}
+        <p className="text-center text-[11px] text-slate-500 mt-6 font-mono">
+          TLS Encrypted • JWT Authentication • Role-Based Access Control
+        </p>
       </div>
     </div>
   );

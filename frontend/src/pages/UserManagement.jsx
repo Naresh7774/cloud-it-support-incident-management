@@ -2,17 +2,30 @@ import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { userApi } from '../api/userApi';
 import { useAuth } from '../context/AuthContext';
-import { Users, Search, AlertCircle, RefreshCw } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import {
+  Users,
+  Search,
+  AlertCircle,
+  RefreshCw,
+  Shield,
+  ShieldAlert,
+  UserCheck,
+  CheckCircle2,
+  Mail,
+  Building,
+} from 'lucide-react';
 
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
+  const toast = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (isManual = false) => {
     setLoading(true);
     try {
       const res = await userApi.getUsers({
@@ -21,9 +34,11 @@ const UserManagement = () => {
       });
       if (res.success && res.data) {
         setUsers(res.data.users || []);
+        if (isManual) toast.success('User directory refreshed from database.');
       }
     } catch (err) {
       console.error('Failed to load users:', err);
+      toast.error('Failed to query user database.');
     } finally {
       setLoading(false);
     }
@@ -33,7 +48,12 @@ const UserManagement = () => {
     fetchUsers();
   }, [roleFilter]);
 
-  const handleRoleChange = async (userId, newRole) => {
+  const handleRoleChange = async (userId, targetUserName, newRole) => {
+    if (userId === currentUser?.id && newRole !== 'admin') {
+      toast.error('You cannot demote your own administrator account.');
+      return;
+    }
+
     setUpdatingId(userId);
     try {
       const res = await userApi.updateUserRole(userId, newRole);
@@ -41,9 +61,10 @@ const UserManagement = () => {
         setUsers((prev) =>
           prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
         );
+        toast.success(`Role for ${targetUserName} updated to ${newRole.toUpperCase()}.`);
       }
     } catch (err) {
-      alert(typeof err === 'string' ? err : 'Failed to update user role.');
+      toast.error(typeof err === 'string' ? err : 'Failed to update user role.');
     } finally {
       setUpdatingId(null);
     }
@@ -51,135 +72,178 @@ const UserManagement = () => {
 
   const filteredUsers = users.filter((u) => {
     if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
     return (
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (u.department && u.department.toLowerCase().includes(searchTerm.toLowerCase()))
+      u.name?.toLowerCase().includes(term) ||
+      u.email?.toLowerCase().includes(term) ||
+      (u.department && u.department.toLowerCase().includes(term))
     );
   });
+
+  const roleStyles = {
+    admin: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+    engineer: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+    user: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+  };
 
   return (
     <AppLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-              <Users className="w-6 h-6 text-sky-600" />
-              User & Role Management
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-brand-primary/10 text-brand-accent border border-brand-primary/20">
+                Staff & Identity Administration
+              </span>
+              <span className="text-xs text-dark-muted font-mono">• MySQL Auth Directory</span>
+            </div>
+            <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+              <Users className="w-6 h-6 text-brand-accent" />
+              User & Role Administration
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Assign roles, control administrative privileges, and manage engineer team memberships.
+            <p className="text-xs text-dark-muted mt-1">
+              Manage enterprise user permissions, promote support engineers, and enforce RBAC governance.
             </p>
           </div>
 
           <button
-            onClick={fetchUsers}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition"
+            onClick={() => fetchUsers(true)}
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-2 bg-dark-card border border-dark-border rounded-xl text-xs font-semibold text-slate-200 hover:bg-dark-surface shadow-sm transition"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh Directory
+            <RefreshCw className="w-3.5 h-3.5 text-brand-accent" />
+            Refresh
           </button>
         </div>
 
-        {/* Filters Toolbar */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row gap-3 justify-between items-center">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by name, email or department..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
+        {/* Directory Card */}
+        <div className="bg-dark-card rounded-2xl shadow-xl border border-dark-border overflow-hidden">
+          {/* Search & Filter Toolbar */}
+          <div className="p-4 sm:p-5 border-b border-dark-border bg-dark-card/90 flex flex-col sm:flex-row gap-3 justify-between items-center">
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Search users by name, email, department..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-navy-900 border border-dark-border rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary transition"
+              />
+            </div>
+
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="text-xs bg-navy-900 border border-dark-border rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-brand-primary transition w-full sm:w-auto"
+              >
+                <option value="">All Roles</option>
+                <option value="admin">Administrators Only</option>
+                <option value="engineer">Support Engineers Only</option>
+                <option value="user">End Users Only</option>
+              </select>
+
+              <span className="text-[11px] text-dark-muted font-mono whitespace-nowrap">
+                {filteredUsers.length} user{filteredUsers.length === 1 ? '' : 's'}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            >
-              <option value="">All Roles</option>
-              <option value="admin">Administrators</option>
-              <option value="engineer">Support Engineers</option>
-              <option value="user">End Users</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Users Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-slate-50 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200">
+            <table className="w-full text-left text-sm text-slate-300">
+              <thead className="bg-dark-surface/90 text-[11px] uppercase tracking-wider font-bold text-slate-400 border-b border-dark-border">
                 <tr>
                   <th className="px-5 py-3.5">User</th>
                   <th className="px-5 py-3.5">Email</th>
                   <th className="px-5 py-3.5">Department</th>
                   <th className="px-5 py-3.5">Current Role</th>
-                  <th className="px-5 py-3.5">Change Role</th>
-                  <th className="px-5 py-3.5">Registered Date</th>
+                  <th className="px-5 py-3.5 text-right">Modify Permission Role</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-dark-border/60">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-slate-400">
-                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
-                      <p className="mt-2 text-xs">Loading user directory...</p>
+                    <td colSpan={5} className="px-5 py-12 text-center text-dark-muted">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-brand-primary/20 border-b-brand-primary"></div>
+                      <p className="mt-2 text-xs">Loading directory...</p>
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-slate-400">
-                      <AlertCircle className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                      <p className="font-medium text-slate-600">No users found matching query.</p>
+                    <td colSpan={5} className="px-5 py-16 text-center text-dark-muted">
+                      <AlertCircle className="w-8 h-8 mx-auto text-slate-600 mb-2" />
+                      <p className="font-semibold text-slate-300">No users match your search query.</p>
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50/75 transition">
-                      <td className="px-5 py-4 font-semibold text-slate-900">
-                        {u.name}
-                        {u.id === currentUser?.id && (
-                          <span className="ml-2 text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-normal">
-                            (You)
+                  filteredUsers.map((u) => {
+                    const isSelf = u.id === currentUser?.id;
+                    const isUpdating = updatingId === u.id;
+
+                    return (
+                      <tr key={u.id} className="hover:bg-dark-surface/50 transition">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-primary to-cyan-500 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm">
+                              {u.name?.charAt(0) || 'U'}
+                            </div>
+                            <div>
+                              <div className="font-bold text-white flex items-center gap-2">
+                                {u.name}
+                                {isSelf && (
+                                  <span className="text-[10px] font-semibold text-brand-accent bg-brand-primary/15 border border-brand-primary/30 px-2 py-0.2 rounded-full">
+                                    You
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[11px] text-dark-muted font-mono">
+                                User ID: #{u.id}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-4 font-mono text-xs text-slate-400">
+                          {u.email}
+                        </td>
+
+                        <td className="px-5 py-4 text-xs text-slate-300">
+                          {u.department || <span className="text-slate-600 italic">Not set</span>}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                              roleStyles[u.role] || roleStyles.user
+                            }`}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                            {u.role}
                           </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-xs font-mono text-slate-600">{u.email}</td>
-                      <td className="px-5 py-4 text-xs text-slate-600">{u.department || 'General IT'}</td>
-                      <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
-                            u.role === 'admin'
-                              ? 'bg-rose-50 text-rose-700 border-rose-200'
-                              : u.role === 'engineer'
-                              ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                              : 'bg-slate-50 text-slate-700 border-slate-200'
-                          }`}
-                        >
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <select
-                          value={u.role}
-                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                          disabled={updatingId === u.id || (u.id === currentUser?.id && u.role === 'admin')}
-                          className="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50"
-                        >
-                          <option value="user">User</option>
-                          <option value="engineer">Support Engineer</option>
-                          <option value="admin">Administrator</option>
-                        </select>
-                      </td>
-                      <td className="px-5 py-4 text-xs text-slate-500 font-mono">
-                        {new Date(u.created_at).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+
+                        <td className="px-5 py-4 text-right">
+                          <div className="inline-flex items-center gap-2">
+                            {isUpdating ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-primary/20 border-b-brand-primary mr-2" />
+                            ) : null}
+
+                            <select
+                              disabled={isSelf || isUpdating}
+                              value={u.role}
+                              onChange={(e) => handleRoleChange(u.id, u.name, e.target.value)}
+                              className="text-xs bg-navy-900 border border-dark-border text-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand-primary disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
+                            >
+                              <option value="user" className="bg-navy-950 text-white">Role: End User</option>
+                              <option value="engineer" className="bg-navy-950 text-white">Role: Support Engineer</option>
+                              <option value="admin" className="bg-navy-950 text-white">Role: Administrator</option>
+                            </select>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

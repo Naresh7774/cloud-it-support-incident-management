@@ -2,24 +2,24 @@ import React from 'react';
 
 const statusConfig = {
   Open: {
-    bg: 'bg-sky-100 text-sky-800 border-sky-300',
-    dot: 'bg-sky-500',
+    bg: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+    dot: 'bg-sky-400',
   },
   Assigned: {
-    bg: 'bg-indigo-100 text-indigo-800 border-indigo-300',
-    dot: 'bg-indigo-500',
+    bg: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
+    dot: 'bg-indigo-400',
   },
   'In Progress': {
-    bg: 'bg-purple-100 text-purple-800 border-purple-300',
-    dot: 'bg-purple-500',
+    bg: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+    dot: 'bg-purple-400',
   },
   Resolved: {
-    bg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-    dot: 'bg-emerald-500',
+    bg: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+    dot: 'bg-emerald-400',
   },
   Closed: {
-    bg: 'bg-slate-100 text-slate-700 border-slate-300',
-    dot: 'bg-slate-400',
+    bg: 'bg-slate-700/40 text-slate-400 border-slate-600/40',
+    dot: 'bg-slate-500',
   },
 };
 
@@ -28,7 +28,7 @@ const StatusBadge = ({ status }) => {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.bg}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${config.bg}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
       {status}

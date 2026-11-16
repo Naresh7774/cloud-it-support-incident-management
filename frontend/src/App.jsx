@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Public Pages
@@ -38,8 +39,8 @@ const RootRedirect = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sky-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-navy-900">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-primary"></div>
       </div>
     );
   }
@@ -60,8 +61,8 @@ const TicketRedirect = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sky-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-navy-900">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-primary"></div>
       </div>
     );
   }
@@ -77,7 +78,8 @@ const TicketRedirect = () => {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
         <Routes>
           {/* Public Auth Routes */}
           <Route path="/login" element={<Login />} />
@@ -287,6 +289,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }

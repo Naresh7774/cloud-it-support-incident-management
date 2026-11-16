@@ -4,9 +4,11 @@ const userModel = require('../models/userModel');
 const dashboardController = {
   async getStats(req, res, next) {
     try {
+      const { dateRange } = req.query;
       const stats = await ticketModel.getStatistics({
         userId: req.user.id,
-        role: req.user.role
+        role: req.user.role,
+        dateRange
       });
 
       // If admin, also include user count breakdown

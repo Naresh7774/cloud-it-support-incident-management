@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ShieldAlert, UserPlus, AlertCircle } from 'lucide-react';
+import { ShieldAlert, UserPlus, AlertCircle, Eye, EyeOff, User, Mail, Lock, Shield } from 'lucide-react';
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState('user');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,104 +28,144 @@ const Register = () => {
 
     try {
       const user = await register({ name, email, password, role });
-      if (user.role === 'admin') navigate('/admin');
-      else if (user.role === 'engineer') navigate('/engineer');
-      else navigate('/dashboard');
+      if (user.role === 'admin') navigate('/admin/dashboard', { replace: true });
+      else if (user.role === 'engineer') navigate('/engineer/dashboard', { replace: true });
+      else navigate('/user/dashboard', { replace: true });
     } catch (err) {
-      setError(typeof err === 'string' ? err : 'Registration failed. Email may already be in use.');
+      setError(typeof err === 'string' ? err : err.message || 'Registration failed. Email may already be registered.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-navy-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 selection:bg-brand-primary/30">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex bg-sky-600 text-white p-3 rounded-2xl shadow-md mb-3">
-          <ShieldAlert className="w-8 h-8" />
+        <div className="inline-flex bg-gradient-to-br from-brand-primary to-blue-700 text-white p-3.5 rounded-2xl shadow-lg shadow-brand-primary/20 mb-4 border border-blue-400/20">
+          <ShieldAlert className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+        <h1 className="text-2xl font-black text-white tracking-tight">
           Create Account
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Join the Cloud Incident & IT Support Platform
+        </h1>
+        <p className="mt-1.5 text-xs text-dark-muted font-medium uppercase tracking-widest">
+          Join Cloud IncidentOps ITSM Platform
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-sm border border-slate-200 sm:rounded-2xl sm:px-10">
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
+        <div className="bg-dark-card py-8 px-6 shadow-2xl rounded-2xl border border-dark-border sm:px-10">
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-white tracking-tight">Register New User</h2>
+            <p className="text-xs text-dark-muted mt-0.5">
+              Set up your profile to raise and resolve incidents.
+            </p>
+          </div>
+
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{error}</span>
+            <div className="mb-5 bg-rose-950/40 border border-rose-500/30 text-rose-300 px-4 py-3 rounded-xl text-xs flex items-center gap-2.5 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+              <span className="font-medium">{error}</span>
             </div>
           )}
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit} autoComplete="off">
+            {/* Full Name */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
                 Full Name
               </label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Jane Smith"
-                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <User className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Alex Morgan"
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-navy-900 border border-dark-border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition"
+                />
+              </div>
             </div>
 
+            {/* Work Email */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                Work Email
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                Work Email Address
               </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="jane@company.com"
-                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="alex@organization.com"
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-navy-900 border border-dark-border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition"
+                />
+              </div>
             </div>
 
+            {/* Password with Eye toggle */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
                 Password
               </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimum 6 characters"
-                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Minimum 6 characters"
+                  className="w-full pl-10 pr-10 py-2.5 bg-navy-900 border border-dark-border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-white transition focus:outline-none"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
+            {/* Initial Role Selection */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                Initial Account Role
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                Account Role
               </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-              >
-                <option value="user">User (Raise & Track Support Tickets)</option>
-                <option value="engineer">Support Engineer (Triage & Resolve Incidents)</option>
-                <option value="admin">Administrator (Full IT Operations Management)</option>
-              </select>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-navy-900 border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition cursor-pointer"
+                >
+                  <option value="user" className="bg-navy-950 text-white">End User (Submit & Track Support Tickets)</option>
+                  <option value="engineer" className="bg-navy-950 text-white">Support Engineer (Triage & Resolve Incidents)</option>
+                  <option value="admin" className="bg-navy-950 text-white">Administrator (System Operations & SLA Policies)</option>
+                </select>
+              </div>
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50 transition"
+              className="w-full mt-2 flex justify-center items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-bold text-white bg-brand-primary hover:bg-brand-primaryHover focus:outline-none focus:ring-2 focus:ring-brand-primary/50 shadow-lg shadow-brand-primary/25 disabled:opacity-50 transition"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-b-white"></div>
               ) : (
                 <>
                   <UserPlus className="w-4 h-4" />
@@ -134,10 +175,10 @@ const Register = () => {
             </button>
           </form>
 
-          <div className="mt-6 text-center text-xs text-slate-500">
+          <div className="mt-6 pt-5 border-t border-dark-border text-center text-xs text-dark-muted">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-sky-600 hover:text-sky-700">
-              Sign in
+            <Link to="/login" className="font-semibold text-brand-accent hover:text-cyan-300 transition">
+              Sign In
             </Link>
           </div>
         </div>

@@ -7,6 +7,7 @@ import SlaTimer from '../components/SlaTimer';
 import { ticketApi } from '../api/ticketApi';
 import { userApi } from '../api/userApi';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import {
   ArrowLeft,
   Clock,
@@ -21,12 +22,17 @@ import {
   UserCheck,
   Tag,
   Calendar,
+  X,
+  FileText,
+  AlertOctagon,
+  CheckCircle2,
 } from 'lucide-react';
 
 const TicketDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useToast();
 
   const [ticket, setTicket] = useState(null);
   const [comments, setComments] = useState([]);
@@ -66,11 +72,11 @@ const TicketDetails = () => {
     if (user?.role === 'admin' || user?.role === 'engineer') {
       try {
         const res = await userApi.getUsers({ role: 'engineer' });
-        if (res.success && res.data?.users) {
-          setEngineers(res.data.users);
+        if (res.success && res.data) {
+          setEngineers(res.data.users || []);
         }
       } catch (err) {
-        console.error('Failed to load engineers:', err);
+        // non-blocking
       }
     }
   };
@@ -80,7 +86,6 @@ const TicketDetails = () => {
     fetchEngineers();
   }, [id]);
 
-  // Handle Comment Submission
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
@@ -89,48 +94,52 @@ const TicketDetails = () => {
     try {
       const res = await ticketApi.addComment(id, {
         comment: newComment.trim(),
-        isInternal: user?.role !== 'user' ? isInternal : false,
+        isInternal: isInternal && (user.role === 'admin' || user.role === 'engineer'),
       });
 
       if (res.success && res.data?.comment) {
         setComments((prev) => [...prev, res.data.comment]);
         setNewComment('');
         setIsInternal(false);
-        fetchTicketData();
+        toast.success(isInternal ? 'Internal staff note added.' : 'Public comment posted.');
       }
     } catch (err) {
-      alert(typeof err === 'string' ? err : 'Failed to add comment.');
+      toast.error(typeof err === 'string' ? err : 'Failed to post comment.');
     } finally {
       setSubmittingComment(false);
     }
   };
 
-  // Handle Status Change
-  const handleStatusChange = async (targetStatus) => {
-    if (targetStatus === 'Resolved') {
+  const handleStatusChange = async (newStatus) => {
+    if (newStatus === 'Resolved') {
+      setStatusAction('Resolved');
       setShowResolveModal(true);
       return;
     }
 
     setUpdatingStatus(true);
     try {
-      const res = await ticketApi.updateStatus(id, { status: targetStatus });
+      const res = await ticketApi.updateStatus(id, {
+        status: newStatus,
+        resolutionNotes: null,
+      });
+
       if (res.success && res.data?.ticket) {
         setTicket(res.data.ticket);
         fetchTicketData();
+        toast.success(`Status updated to ${newStatus}.`);
       }
     } catch (err) {
-      alert(typeof err === 'string' ? err : 'Failed to update ticket status.');
+      toast.error(typeof err === 'string' ? err : 'Failed to update ticket status.');
     } finally {
       setUpdatingStatus(false);
     }
   };
 
-  // Handle Resolution Submit
-  const handleResolveSubmit = async (e) => {
+  const handleConfirmResolve = async (e) => {
     e.preventDefault();
     if (!resolutionNotes.trim()) {
-      alert('Resolution notes are required.');
+      toast.error('Resolution notes are mandatory when marking an incident Resolved.');
       return;
     }
 
@@ -140,50 +149,50 @@ const TicketDetails = () => {
         status: 'Resolved',
         resolutionNotes: resolutionNotes.trim(),
       });
+
       if (res.success && res.data?.ticket) {
         setTicket(res.data.ticket);
         setShowResolveModal(false);
         setResolutionNotes('');
         fetchTicketData();
+        toast.success('Incident resolved with verified resolution notes.');
       }
     } catch (err) {
-      alert(typeof err === 'string' ? err : 'Failed to resolve ticket.');
+      toast.error(typeof err === 'string' ? err : 'Failed to resolve ticket.');
     } finally {
       setUpdatingStatus(false);
     }
   };
 
-  // Handle Engineer Assignment
-  const handleAssign = async (targetEngineerId) => {
+  const handleAssign = async (engineerId) => {
     try {
-      const res = await ticketApi.assignTicket(id, targetEngineerId);
-      if (res.success && res.data?.ticket) {
-        setTicket(res.data.ticket);
+      const res = await ticketApi.assignTicket(id, engineerId);
+      if (res.success) {
         fetchTicketData();
+        toast.success('Incident reassigned successfully.');
       }
     } catch (err) {
-      alert(typeof err === 'string' ? err : 'Failed to assign engineer.');
+      toast.error(typeof err === 'string' ? err : 'Failed to reassign incident.');
     }
   };
 
-  // Handle Priority Change
   const handlePriorityChange = async (newPriority) => {
     try {
       const res = await ticketApi.updatePriority(id, newPriority);
-      if (res.success && res.data?.ticket) {
-        setTicket(res.data.ticket);
+      if (res.success) {
         fetchTicketData();
+        toast.success(`Priority updated to ${newPriority}. SLA deadline recalculated.`);
       }
     } catch (err) {
-      alert(typeof err === 'string' ? err : 'Failed to adjust priority.');
+      toast.error(typeof err === 'string' ? err : 'Failed to adjust priority.');
     }
   };
 
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex justify-center items-center h-[60vh]">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sky-600"></div>
+        <div className="flex justify-center items-center h-[60vh] text-dark-muted">
+          <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-brand-primary/20 border-b-brand-primary"></div>
         </div>
       </AppLayout>
     );
@@ -192,12 +201,13 @@ const TicketDetails = () => {
   if (error || !ticket) {
     return (
       <AppLayout>
-        <div className="max-w-4xl mx-auto px-4 py-12 text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-          <h2 className="text-xl font-bold text-slate-900">{error || 'Incident record not found'}</h2>
+        <div className="max-w-4xl mx-auto px-4 py-16 text-center bg-dark-card border border-dark-border rounded-2xl shadow-xl">
+          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
+          <h2 className="text-lg font-bold text-white">{error || 'Incident record not found'}</h2>
+          <p className="text-xs text-dark-muted mt-1">This ticket may have been removed or you do not possess access rights.</p>
           <button
             onClick={() => navigate(-1)}
-            className="mt-4 px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold"
+            className="mt-5 px-4 py-2 bg-brand-primary hover:bg-brand-primaryHover text-white rounded-xl text-xs font-bold transition shadow-md"
           >
             Return Back
           </button>
@@ -213,11 +223,11 @@ const TicketDetails = () => {
     <AppLayout>
       <div className="space-y-6">
         {/* Header Hero Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div className="bg-dark-card rounded-2xl shadow-xl border border-dark-border p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="font-mono text-xs font-bold text-sky-700 bg-sky-50 px-2.5 py-1 rounded-md border border-sky-200">
+              <div className="flex flex-wrap items-center gap-2 mb-2.5">
+                <span className="font-mono text-xs font-bold text-brand-accent bg-brand-primary/10 px-2.5 py-1 rounded-lg border border-brand-primary/30">
                   {ticket.ticket_number}
                 </span>
                 <PriorityBadge priority={ticket.priority} />
@@ -228,21 +238,21 @@ const TicketDetails = () => {
                   isOverdue={ticket.is_overdue}
                 />
               </div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{ticket.title}</h1>
-              <p className="text-xs text-slate-500 mt-1">
-                Category: <strong className="text-slate-700">{ticket.category}</strong> • Created by{' '}
-                <strong className="text-slate-700">{ticket.creator_name}</strong> (
+              <h1 className="text-2xl font-black text-white tracking-tight">{ticket.title}</h1>
+              <p className="text-xs text-dark-muted mt-1.5">
+                Category: <strong className="text-slate-300 font-mono">{ticket.category}</strong> • Created by{' '}
+                <strong className="text-slate-200">{ticket.creator_name}</strong> (
                 {ticket.creator_email}) on {new Date(ticket.created_at).toLocaleString()}
               </p>
             </div>
 
-            {/* Quick Actions for Staff */}
+            {/* Quick Actions */}
             <div className="flex flex-wrap items-center gap-2">
               {/* Accept & Self-Assign (Engineer) */}
               {user?.role === 'engineer' && ticket.assigned_to !== user?.id && ticket.status !== 'Closed' && (
                 <button
                   onClick={() => handleAssign(user.id)}
-                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition"
                 >
                   Accept & Assign to Me
                 </button>
@@ -253,28 +263,29 @@ const TicketDetails = () => {
                 <button
                   onClick={() => handleStatusChange('In Progress')}
                   disabled={updatingStatus}
-                  className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-md shadow-purple-600/20 transition"
                 >
                   Start Progress
                 </button>
               )}
 
-              {isStaff && (ticket.status === 'Open' || ticket.status === 'Assigned' || ticket.status === 'In Progress') && (
-                <button
-                  onClick={() => handleStatusChange('Resolved')}
-                  disabled={updatingStatus}
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
-                >
-                  Resolve Incident
-                </button>
-              )}
+              {isStaff &&
+                (ticket.status === 'Open' || ticket.status === 'Assigned' || ticket.status === 'In Progress') && (
+                  <button
+                    onClick={() => handleStatusChange('Resolved')}
+                    disabled={updatingStatus}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition"
+                  >
+                    Resolve Incident
+                  </button>
+                )}
 
               {/* Close Ticket (Owner or Staff) */}
               {(isStaff || isOwner) && ticket.status === 'Resolved' && (
                 <button
                   onClick={() => handleStatusChange('Closed')}
                   disabled={updatingStatus}
-                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold shadow-sm transition"
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white border border-slate-600/50 rounded-xl text-xs font-bold shadow-md transition"
                 >
                   Confirm & Close Incident
                 </button>
@@ -288,24 +299,24 @@ const TicketDetails = () => {
           {/* Main Column: Details, Resolution Notes, Comments */}
           <div className="lg:col-span-2 space-y-6">
             {/* Description */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">
-                Incident Description & Impact
+            <div className="bg-dark-card rounded-2xl shadow-xl border border-dark-border p-6">
+              <h2 className="text-xs font-bold text-dark-muted uppercase tracking-wider mb-3">
+                Incident Description & Scope
               </h2>
-              <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 font-sans">
+              <div className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed bg-navy-900 p-4 rounded-xl border border-dark-border font-sans">
                 {ticket.description}
               </div>
 
               {/* Resolution Notes Banner (if present) */}
               {ticket.resolution_notes && (
-                <div className="mt-5 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900">
-                  <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-emerald-800 mb-1">
-                    <CheckCircle className="w-4 h-4 text-emerald-600" />
-                    Resolution Summary
+                <div className="mt-5 p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-200">
+                  <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-emerald-400 mb-1">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    Verified Resolution Summary
                   </div>
-                  <p className="text-sm">{ticket.resolution_notes}</p>
+                  <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{ticket.resolution_notes}</p>
                   {ticket.resolved_at && (
-                    <span className="block mt-2 text-xs text-emerald-700">
+                    <span className="block mt-2 text-xs text-emerald-400 font-mono">
                       Resolved on: {new Date(ticket.resolved_at).toLocaleString()}
                     </span>
                   )}
@@ -314,12 +325,12 @@ const TicketDetails = () => {
             </div>
 
             {/* Comments Thread */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center justify-between mb-6">
+            <div className="bg-dark-card rounded-2xl shadow-xl border border-dark-border p-6">
+              <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-sky-600" />
-                  <h2 className="text-base font-bold text-slate-900">
-                    Discussion & Collaboration ({comments.length})
+                  <MessageSquare className="w-5 h-5 text-brand-accent" />
+                  <h2 className="text-base font-bold text-white">
+                    Investigation Log & Discussion ({comments.length})
                   </h2>
                 </div>
               </div>
@@ -327,7 +338,7 @@ const TicketDetails = () => {
               {/* Comment List */}
               <div className="space-y-4 mb-6">
                 {comments.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic text-center py-6">
+                  <p className="text-xs text-dark-muted italic text-center py-6">
                     No comments recorded yet. Add notes or questions below.
                   </p>
                 ) : (
@@ -336,63 +347,65 @@ const TicketDetails = () => {
                       key={c.id}
                       className={`p-4 rounded-xl border text-sm transition ${
                         c.is_internal
-                          ? 'bg-amber-50/70 border-amber-200 text-amber-950'
-                          : 'bg-slate-50 border-slate-200 text-slate-800'
+                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                          : 'bg-navy-900 border-dark-border text-slate-200'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-slate-900">
-                            {c.author_name}
-                          </span>
-                          <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                          <span className="font-bold text-xs text-white">{c.author_name}</span>
+                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-dark-surface text-slate-300 border border-dark-border">
                             {c.author_role}
                           </span>
                           {c.is_internal && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
                               <Lock className="w-3 h-3" />
                               Internal Note
                             </span>
                           )}
                         </div>
-                        <span className="text-[11px] text-slate-400">
+                        <span className="text-[11px] text-dark-muted font-mono">
                           {new Date(c.created_at).toLocaleString()}
                         </span>
                       </div>
-                      <p className="whitespace-pre-wrap">{c.comment}</p>
+                      <p className="whitespace-pre-wrap text-slate-300 text-xs sm:text-sm leading-relaxed">
+                        {c.comment}
+                      </p>
                     </div>
                   ))
                 )}
               </div>
 
               {/* Add Comment Form */}
-              <form onSubmit={handleAddComment} className="pt-4 border-t border-slate-100 space-y-3">
+              <form onSubmit={handleAddComment} className="pt-4 border-t border-dark-border space-y-3">
                 <textarea
                   rows={3}
                   required
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Type an update, triage question, or resolution step..."
-                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  placeholder="Type an update, triage question, or investigation step..."
+                  className="w-full p-3 bg-navy-900 border border-dark-border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary leading-relaxed"
                 />
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   {isStaff ? (
-                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-300 cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={isInternal}
                         onChange={(e) => setIsInternal(e.target.checked)}
-                        className="rounded text-sky-600 focus:ring-sky-500"
+                        className="rounded bg-navy-900 border-dark-border text-brand-primary focus:ring-brand-primary"
                       />
-                      <span>Internal staff note (hidden from customer)</span>
+                      <span>Internal staff note (Strictly hidden from customer)</span>
                     </label>
-                  ) : <div />}
+                  ) : (
+                    <div />
+                  )}
 
                   <button
                     type="submit"
                     disabled={submittingComment}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold shadow-sm disabled:opacity-50 transition"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2 bg-brand-primary hover:bg-brand-primaryHover text-white rounded-xl text-xs font-bold shadow-md shadow-brand-primary/20 disabled:opacity-50 transition"
                   >
                     <Send className="w-3.5 h-3.5" />
                     Post Comment
@@ -406,21 +419,21 @@ const TicketDetails = () => {
           <div className="space-y-6">
             {/* Incident Controls Card (Staff) */}
             {isStaff && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Incident Operations
+              <div className="bg-dark-card rounded-2xl shadow-xl border border-dark-border p-5 space-y-4">
+                <h3 className="text-xs font-bold text-dark-muted uppercase tracking-wider pb-2 border-b border-dark-border">
+                  Incident Triage Controls
                 </h3>
 
                 {/* Status Picker */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">
-                    Update Incident Status
+                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                    Transition Status
                   </label>
                   <select
                     value={ticket.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
                     disabled={updatingStatus}
-                    className="w-full text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:ring-2 focus:ring-sky-500"
+                    className="w-full text-xs font-bold bg-navy-900 border border-dark-border rounded-xl p-2.5 text-white focus:border-brand-primary transition cursor-pointer"
                   >
                     <option value="Open">Open</option>
                     <option value="Assigned">Assigned</option>
@@ -432,13 +445,13 @@ const TicketDetails = () => {
 
                 {/* Priority Picker */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                  <label className="block text-xs font-medium text-slate-400 mb-1">
                     Adjust Priority (Recalculates SLA)
                   </label>
                   <select
                     value={ticket.priority}
                     onChange={(e) => handlePriorityChange(e.target.value)}
-                    className="w-full text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:ring-2 focus:ring-sky-500"
+                    className="w-full text-xs font-bold bg-navy-900 border border-dark-border rounded-xl p-2.5 text-white focus:border-brand-primary transition cursor-pointer"
                   >
                     <option value="Critical">Critical (15m SLA)</option>
                     <option value="High">High (1h SLA)</option>
@@ -449,13 +462,13 @@ const TicketDetails = () => {
 
                 {/* Engineer Assignment */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">
-                    Assign Support Engineer
+                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                    Assignee Engineer
                   </label>
                   <select
                     value={ticket.assigned_to || ''}
-                    onChange={(e) => handleAssign(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:ring-2 focus:ring-sky-500"
+                    onChange={(e) => handleAssign(e.target.value ? parseInt(e.target.value, 10) : null)}
+                    className="w-full text-xs font-bold bg-navy-900 border border-dark-border rounded-xl p-2.5 text-white focus:border-brand-primary transition cursor-pointer"
                   >
                     <option value="">Unassigned</option>
                     {engineers.map((eng) => (
@@ -468,131 +481,139 @@ const TicketDetails = () => {
               </div>
             )}
 
-            {/* Metadata Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3.5">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Service Level & Ownership
+            {/* SLA Telemetry Card */}
+            <div className="bg-dark-card rounded-2xl shadow-xl border border-dark-border p-5 space-y-3">
+              <h3 className="text-xs font-bold text-dark-muted uppercase tracking-wider pb-2 border-b border-dark-border">
+                SLA Compliance Telemetry
               </h3>
 
-              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
-                <span className="text-slate-500">Assigned Engineer:</span>
-                <span className="font-semibold text-slate-800">
-                  {ticket.assignee_name || 'Unassigned'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
-                <span className="text-slate-500">Target SLA Deadline:</span>
-                <span className="font-semibold text-slate-800">
-                  {new Date(ticket.sla_deadline).toLocaleString()}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
-                <span className="text-slate-500">Created Timestamp:</span>
-                <span className="text-slate-700">
-                  {new Date(ticket.created_at).toLocaleString()}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs py-1">
-                <span className="text-slate-500">Last Updated:</span>
-                <span className="text-slate-700">
-                  {new Date(ticket.updated_at).toLocaleTimeString()}
-                </span>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between py-1 border-b border-dark-border/60">
+                  <span className="text-slate-400">Created:</span>
+                  <span className="font-mono text-white text-right">
+                    {new Date(ticket.created_at).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-dark-border/60">
+                  <span className="text-slate-400">SLA Target Deadline:</span>
+                  <span className="font-mono text-brand-accent text-right">
+                    {new Date(ticket.sla_deadline).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-dark-border/60">
+                  <span className="text-slate-400">Current Status:</span>
+                  <StatusBadge status={ticket.status} />
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-400">Breach Flag:</span>
+                  <span
+                    className={`font-bold font-mono ${
+                      ticket.is_overdue ? 'text-rose-400' : 'text-emerald-400'
+                    }`}
+                  >
+                    {ticket.is_overdue ? 'BREACHED' : 'COMPLIANT'}
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Audit History Timeline */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <History className="w-4 h-4 text-sky-600" />
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Incident Audit Log ({history.length})
+            <div className="bg-dark-card rounded-2xl shadow-xl border border-dark-border p-5 space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-dark-border">
+                <History className="w-4 h-4 text-brand-accent" />
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                  Audit History ({history.length})
                 </h3>
               </div>
 
-              <div className="flow-root max-h-80 overflow-y-auto pr-2">
-                <ul className="-mb-8">
-                  {history.map((event, idx) => (
-                    <li key={event.id}>
-                      <div className="relative pb-8">
-                        {idx !== history.length - 1 && (
-                          <span
-                            className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-slate-200"
-                            aria-hidden="true"
-                          />
-                        )}
-                        <div className="relative flex space-x-3">
-                          <div>
-                            <span className="h-8 w-8 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center ring-4 ring-white text-[10px] font-bold">
-                              {event.action.slice(0, 2)}
-                            </span>
-                          </div>
-                          <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                            <div>
-                              <p className="text-xs text-slate-700 font-medium">
-                                <strong className="text-slate-900">{event.actor_name}</strong>{' '}
-                                performed <span className="font-bold text-sky-700">{event.action}</span>
-                              </p>
-                              {event.old_value && event.new_value && (
-                                <p className="text-[11px] text-slate-500 mt-0.5">
-                                  {event.old_value} &rarr; {event.new_value}
-                                </p>
-                              )}
-                              {event.notes && (
-                                <p className="text-[11px] text-slate-600 mt-0.5 italic">
-                                  "{event.notes}"
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right text-[10px] whitespace-nowrap text-slate-400 font-mono">
-                              {new Date(event.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          </div>
+              <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+                {history.length === 0 ? (
+                  <p className="text-xs text-dark-muted italic">No historical actions logged.</p>
+                ) : (
+                  history.map((h, idx) => (
+                    <div key={h.id || idx} className="flex items-start gap-3 text-xs">
+                      <div className="w-2 h-2 rounded-full bg-brand-primary mt-1.5 flex-shrink-0" />
+                      <div className="flex-1 space-y-0.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-white">{h.action.replace('_', ' ')}</span>
+                          <span className="text-[10px] text-dark-muted font-mono">
+                            {new Date(h.created_at).toLocaleTimeString()}
+                          </span>
                         </div>
+                        {h.old_value && h.new_value && (
+                          <p className="text-[11px] text-slate-400 font-mono">
+                            {h.old_value} &rarr; <span className="text-brand-accent">{h.new_value}</span>
+                          </p>
+                        )}
+                        {h.notes && (
+                          <p className="text-[11px] text-slate-300 leading-tight">{h.notes}</p>
+                        )}
+                        <span className="text-[10px] text-dark-muted font-mono block">
+                          By {h.user_name || 'System User'}
+                        </span>
                       </div>
-                    </li>
-                  ))}
-                </ul>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Modal for Resolution Notes */}
+        {/* Resolve Modal Dialog */}
         {showResolveModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Resolve Incident</h3>
-              <p className="text-xs text-slate-500 mb-4">
-                Please document the root cause, fix applied, or resolution instructions for future knowledge base reference.
-              </p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div className="bg-dark-card border border-dark-border rounded-2xl shadow-2xl max-w-lg w-full p-6 text-dark-light animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between pb-4 border-b border-dark-border">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  <h3 className="text-base font-bold text-white">Resolve Incident</h3>
+                </div>
+                <button
+                  onClick={() => setShowResolveModal(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-dark-surface transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-              <form onSubmit={handleResolveSubmit} className="space-y-4">
-                <textarea
-                  rows={4}
-                  required
-                  value={resolutionNotes}
-                  onChange={(e) => setResolutionNotes(e.target.value)}
-                  placeholder="e.g. Cleared deadlock in connection pool, scaled IOPS, or deployed DNS fix..."
-                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+              <form onSubmit={handleConfirmResolve} className="mt-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                    Resolution Notes & Mitigation Summary *
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={resolutionNotes}
+                    onChange={(e) => setResolutionNotes(e.target.value)}
+                    placeholder="Describe the root cause, patch applied, rollback performed, or mitigation verified..."
+                    className="w-full px-3.5 py-2.5 bg-navy-900 border border-dark-border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary leading-relaxed"
+                  />
+                  <p className="text-[11px] text-dark-muted mt-1">
+                    These notes will be displayed on the ticket ledger and shared with the reporting user upon verification.
+                  </p>
+                </div>
 
-                <div className="flex justify-end gap-2">
+                <div className="pt-3 border-t border-dark-border flex items-center justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={() => setShowResolveModal(false)}
-                    className="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-dark-surface hover:bg-dark-hover transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={updatingStatus}
-                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
+                    className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/20 transition disabled:opacity-50"
                   >
-                    Confirm Resolution
+                    {updatingStatus ? (
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-b-white" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    )}
+                    Confirm & Resolve Ticket
                   </button>
                 </div>
               </form>
