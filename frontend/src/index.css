@@ -7,8 +7,17 @@
     color-scheme: dark;
   }
   body {
-    @apply bg-navy-900 text-dark-light antialiased selection:bg-brand-primary/30 selection:text-white min-h-screen;
+    background-color: #0B1220;
+    color: #F8FAFC;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  ::selection {
+    background-color: rgba(22, 119, 232, 0.3);
+    color: #FFFFFF;
   }
 }
 
