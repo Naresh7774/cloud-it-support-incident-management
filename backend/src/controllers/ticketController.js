@@ -177,7 +177,8 @@ const ticketController = {
   async updateStatus(req, res, next) {
     try {
       const { id } = req.params;
-      const { status, resolutionNotes } = req.body;
+      const { status } = req.body;
+      const resolutionNotes = req.body.resolutionNotes || req.body.resolution_notes;
       const validStatuses = ['Open', 'Assigned', 'In Progress', 'Resolved', 'Closed'];
 
       if (!validStatuses.includes(status)) {
@@ -279,7 +280,9 @@ const ticketController = {
   async assignTicket(req, res, next) {
     try {
       const { id } = req.params;
-      const { engineerId } = req.body;
+      const engineerId = req.body.engineerId !== undefined 
+        ? req.body.engineerId 
+        : (req.body.assigned_to !== undefined ? req.body.assigned_to : req.body.assignedTo);
 
       const ticket = await ticketModel.findById(id);
       if (!ticket) {

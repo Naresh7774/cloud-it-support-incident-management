@@ -52,6 +52,7 @@ router.put(
     param('id').notEmpty().withMessage('Ticket ID is required'),
     body('status').isIn(['Open', 'Assigned', 'In Progress', 'Resolved', 'Closed']).withMessage('Invalid ticket status'),
     body('resolutionNotes').optional().trim(),
+    body('resolution_notes').optional().trim(),
     validateRequest
   ],
   ticketController.updateStatus
@@ -64,6 +65,7 @@ router.put(
   [
     param('id').notEmpty().withMessage('Ticket ID is required'),
     body('engineerId').optional().isInt().withMessage('Engineer ID must be an integer'),
+    body('assigned_to').optional().isInt().withMessage('assigned_to must be an integer'),
     validateRequest
   ],
   ticketController.assignTicket

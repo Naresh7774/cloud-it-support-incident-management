@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const request = require('supertest');
 const app = require('../src/app');
 
@@ -181,6 +182,45 @@ async function runE2ETests() {
     assert(adminStatsRes.status === 200, `Admin stats API responded 200 OK`);
     assert(adminStatsRes.body.data.summary.total > 0, `Total tickets count > 0`);
     assert(adminStatsRes.body.data.byPriority.length > 0, `Priority breakdown data present`);
+
+    // 8. Verify New Multi-Page APIs: Notifications, Analytics, Settings, Profile & History
+    console.log('\n--- 8. Verifying Multi-Page Navigation Endpoints ---');
+    
+    // Notifications
+    const notifRes = await request(app)
+      .get('/api/notifications')
+      .set('Authorization', `Bearer ${adminToken}`);
+    assert(notifRes.status === 200, `Notifications API responded 200 OK`);
+    assert(Array.isArray(notifRes.body.data.notifications), `Notifications array returned`);
+
+    // Analytics (Admin)
+    const analyticsRes = await request(app)
+      .get('/api/analytics')
+      .set('Authorization', `Bearer ${adminToken}`);
+    assert(analyticsRes.status === 200, `Analytics API responded 200 OK`);
+    assert(analyticsRes.body.data.overview.slaComplianceRate !== undefined, `SLA Compliance metric present`);
+    assert(Array.isArray(analyticsRes.body.data.engineerLeaderboard), `Engineer leaderboard present`);
+
+    // Settings (Admin)
+    const settingsRes = await request(app)
+      .get('/api/settings')
+      .set('Authorization', `Bearer ${adminToken}`);
+    assert(settingsRes.status === 200, `Settings API responded 200 OK`);
+    assert(settingsRes.body.data.map.system_name !== undefined, `System name setting present`);
+
+    // User Profile
+    const profileRes = await request(app)
+      .get('/api/users/profile')
+      .set('Authorization', `Bearer ${userToken}`);
+    assert(profileRes.status === 200, `User profile API responded 200 OK`);
+    assert(profileRes.body.data.user.email === 'user@cloudsupport.local', `Profile email matched`);
+
+    // Engineer History
+    const historyApiRes = await request(app)
+      .get('/api/users/history')
+      .set('Authorization', `Bearer ${engToken}`);
+    assert(historyApiRes.status === 200, `Engineer history API responded 200 OK`);
+    assert(Array.isArray(historyApiRes.body.data.history), `Engineer history array present`);
 
     // Summary
     console.log('\n====================================================================');

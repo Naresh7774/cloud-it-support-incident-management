@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS `users` (
     `email` VARCHAR(191) NOT NULL UNIQUE,
     `password_hash` VARCHAR(255) NOT NULL,
     `role` ENUM('user', 'engineer', 'admin') NOT NULL DEFAULT 'user',
+    `department` VARCHAR(100) DEFAULT 'General IT',
+    `phone` VARCHAR(30) DEFAULT NULL,
+    `bio` TEXT DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX `idx_users_email` (`email`),
@@ -86,6 +89,32 @@ CREATE TABLE IF NOT EXISTS `ticket_history` (
     INDEX `idx_history_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 6. Notifications Table
+CREATE TABLE IF NOT EXISTS `notifications` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `title` VARCHAR(200) NOT NULL,
+    `message` TEXT NOT NULL,
+    `type` ENUM('info', 'warning', 'alert', 'success') DEFAULT 'info',
+    `link` VARCHAR(255) DEFAULT NULL,
+    `is_read` BOOLEAN DEFAULT FALSE,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    INDEX `idx_notif_user_id` (`user_id`),
+    INDEX `idx_notif_is_read` (`is_read`),
+    INDEX `idx_notif_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 7. System Settings Table
+CREATE TABLE IF NOT EXISTS `system_settings` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `setting_key` VARCHAR(100) NOT NULL UNIQUE,
+    `setting_value` TEXT NOT NULL,
+    `category` VARCHAR(50) DEFAULT 'general',
+    `description` VARCHAR(255) DEFAULT NULL,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Seed Initial SLA Policies
 INSERT INTO `sla_configs` (`priority`, `target_minutes`, `description`)
 VALUES
@@ -109,3 +138,13 @@ VALUES
 ON DUPLICATE KEY UPDATE 
     `name` = VALUES(`name`),
     `role` = VALUES(`role`);
+
+-- Seed Default Settings
+INSERT INTO `system_settings` (`setting_key`, `setting_value`, `category`, `description`)
+VALUES 
+    ('system_name', 'Cloud IncidentOps Enterprise', 'general', 'Portal Branding Name'),
+    ('support_email', 'it-support@cloudops.internal', 'general', 'General IT Support Helpdesk Email'),
+    ('auto_assignment', 'false', 'routing', 'Automatically assign open tickets to engineers with lowest workload'),
+    ('sla_escalation_minutes', '15', 'sla', 'Minutes before SLA breach to send high-priority alert notification'),
+    ('maintenance_mode', 'false', 'system', 'Display scheduled maintenance banner across user portal')
+ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`);

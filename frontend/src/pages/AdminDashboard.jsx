@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
+import { Link } from 'react-router-dom';
+import AppLayout from '../components/AppLayout';
 import StatCard from '../components/StatCard';
 import TicketTable from '../components/TicketTable';
 import { ticketApi } from '../api/ticketApi';
 import { dashboardApi } from '../api/dashboardApi';
 import {
-  BarChart3,
+  Layers,
   Clock,
+  BarChart3,
   CheckCircle2,
   AlertOctagon,
   Flame,
-  Settings,
-  Layers,
-  Save,
-  Edit2,
+  ArrowRight,
+  Sliders,
   Users,
+  TrendingUp,
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -22,30 +23,20 @@ const AdminDashboard = () => {
     summary: { total: 0, open: 0, assigned: 0, in_progress: 0, resolved: 0, closed: 0, overdue: 0, critical_active: 0 },
     byPriority: [],
     byCategory: [],
-    userBreakdown: []
   });
-  const [tickets, setTickets] = useState([]);
-  const [slaConfigs, setSlaConfigs] = useState([]);
+  const [recentIncidents, setRecentIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // SLA editing state
-  const [editingPriority, setEditingPriority] = useState(null);
-  const [targetMinutes, setTargetMinutes] = useState(60);
-  const [description, setDescription] = useState('');
-  const [savingSla, setSavingSla] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, ticketsRes, slaRes] = await Promise.all([
+      const [statsRes, ticketsRes] = await Promise.all([
         dashboardApi.getStats(),
-        ticketApi.getTickets({ limit: 100 }),
-        dashboardApi.getSlaConfigs()
+        ticketApi.getTickets({ limit: 10 })
       ]);
 
       if (statsRes.success) setStats(statsRes.data);
-      if (ticketsRes.success) setTickets(ticketsRes.data.tickets || []);
-      if (slaRes.success) setSlaConfigs(slaRes.data.configs || []);
+      if (ticketsRes.success) setRecentIncidents(ticketsRes.data.tickets || []);
     } catch (err) {
       console.error('Failed to load admin metrics:', err);
     } finally {
@@ -57,99 +48,143 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  const handleEditSla = (config) => {
-    setEditingPriority(config.priority);
-    setTargetMinutes(config.target_minutes);
-    setDescription(config.description || '');
-  };
-
-  const handleSaveSla = async (e) => {
-    e.preventDefault();
-    setSavingSla(true);
-    try {
-      const res = await dashboardApi.updateSlaConfig({
-        priority: editingPriority,
-        targetMinutes: parseInt(targetMinutes, 10),
-        description
-      });
-      if (res.success) {
-        setEditingPriority(null);
-        fetchData();
-      }
-    } catch (err) {
-      alert(typeof err === 'string' ? err : 'Failed to update SLA configuration.');
-    } finally {
-      setSavingSla(false);
-    }
-  };
-
   const summary = stats.summary || {};
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16">
-      <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <AppLayout>
+      <div className="space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">IT Support & Incident Command</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Admin Incident Command Center</h1>
             <p className="text-sm text-slate-500 mt-1">
-              Complete visibility into support SLA performance, incident backlogs, and engineering assignments.
+              Real-time enterprise support oversight, team workload, and SLA performance metrics.
             </p>
           </div>
-          <button
-            onClick={fetchData}
-            className="self-start sm:self-auto px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm"
+          <div className="flex items-center gap-2">
+            <Link
+              to="/admin/incidents"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-sky-600 text-white rounded-lg hover:bg-sky-700 shadow-sm transition"
+            >
+              All Incidents
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Global Statistics Grid (Clickable Cards) */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <Link to="/admin/incidents">
+            <StatCard
+              title="Total Incidents"
+              count={summary.total}
+              icon={Layers}
+              color="blue"
+              subtitle="All time tickets"
+            />
+          </Link>
+          <Link to="/admin/incidents?status=Open">
+            <StatCard
+              title="Open Queue"
+              count={summary.open}
+              icon={Clock}
+              color="indigo"
+              subtitle="Awaiting assignment"
+            />
+          </Link>
+          <Link to="/admin/incidents?status=In+Progress">
+            <StatCard
+              title="In Progress"
+              count={summary.in_progress}
+              icon={BarChart3}
+              color="purple"
+              subtitle="Under active triage"
+            />
+          </Link>
+          <Link to="/admin/incidents?status=Resolved">
+            <StatCard
+              title="Resolved"
+              count={summary.resolved}
+              icon={CheckCircle2}
+              color="emerald"
+              subtitle="Awaiting closure"
+            />
+          </Link>
+          <Link to="/admin/incidents?isOverdue=true">
+            <StatCard
+              title="Overdue (Breached)"
+              count={summary.overdue}
+              icon={AlertOctagon}
+              color="red"
+              alert={summary.overdue > 0}
+              subtitle="Breached SLA"
+            />
+          </Link>
+          <Link to="/admin/incidents?priority=Critical">
+            <StatCard
+              title="Active Critical"
+              count={summary.critical_active}
+              icon={Flame}
+              color="red"
+              alert={summary.critical_active > 0}
+              subtitle="15m SLA outages"
+            />
+          </Link>
+        </div>
+
+        {/* Quick Hub Navigation Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <Link
+            to="/admin/sla"
+            className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-sky-300 hover:shadow-md transition group"
           >
-            Refresh Metrics
-          </button>
+            <div className="flex items-center justify-between">
+              <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-100 text-amber-600">
+                <Sliders className="w-5 h-5" />
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-sky-600 group-hover:translate-x-1 transition" />
+            </div>
+            <h3 className="mt-3 text-sm font-bold text-slate-900">SLA Policy Configuration</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Manage target resolution windows for Critical (15m), High (1h), Medium (4h), and Low (8h).
+            </p>
+          </Link>
+
+          <Link
+            to="/admin/analytics"
+            className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-sky-300 hover:shadow-md transition group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="p-2.5 bg-sky-50 rounded-xl border border-sky-100 text-sky-600">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-sky-600 group-hover:translate-x-1 transition" />
+            </div>
+            <h3 className="mt-3 text-sm font-bold text-slate-900">Analytics & Performance Reports</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Review MTTR, SLA compliance percentage, team resolution leaderboard, and volume trends.
+            </p>
+          </Link>
+
+          <Link
+            to="/admin/users"
+            className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-sky-300 hover:shadow-md transition group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-100 text-indigo-600">
+                <Users className="w-5 h-5" />
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-sky-600 group-hover:translate-x-1 transition" />
+            </div>
+            <h3 className="mt-3 text-sm font-bold text-slate-900">User & Role Administration</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Assign roles, control administrative privileges, and manage engineer team memberships.
+            </p>
+          </Link>
         </div>
 
-        {/* Global Statistics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <StatCard
-            title="Total Incidents"
-            count={summary.total}
-            icon={Layers}
-            color="blue"
-          />
-          <StatCard
-            title="Open / Unassigned"
-            count={summary.open}
-            icon={Clock}
-            color="indigo"
-          />
-          <StatCard
-            title="In Progress"
-            count={summary.in_progress}
-            icon={BarChart3}
-            color="purple"
-          />
-          <StatCard
-            title="Resolved"
-            count={summary.resolved}
-            icon={CheckCircle2}
-            color="emerald"
-          />
-          <StatCard
-            title="Overdue (Breached)"
-            count={summary.overdue}
-            icon={AlertOctagon}
-            color="red"
-            alert={summary.overdue > 0}
-          />
-          <StatCard
-            title="Active Critical"
-            count={summary.critical_active}
-            icon={Flame}
-            color="red"
-            alert={summary.critical_active > 0}
-          />
-        </div>
-
-        {/* Analytical Panels: Priority, Category & Configurable SLA */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Priority & Category Overview Panels */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Priority Breakdown */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4">
@@ -163,7 +198,7 @@ const AdminDashboard = () => {
                   <div key={row.priority} className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-slate-700">{row.priority}</span>
                     <div className="flex items-center gap-3">
-                      <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
+                      <div className="w-32 bg-slate-100 rounded-full h-2 overflow-hidden">
                         <div
                           className={`h-2 rounded-full ${
                             row.priority === 'Critical'
@@ -198,7 +233,7 @@ const AdminDashboard = () => {
               ) : (
                 stats.byCategory.map((cat) => (
                   <div key={cat.category} className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-slate-600 truncate max-w-[150px]">{cat.category}</span>
+                    <span className="font-medium text-slate-600 truncate max-w-[200px]">{cat.category}</span>
                     <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
                       {cat.count}
                     </span>
@@ -207,119 +242,24 @@ const AdminDashboard = () => {
               )}
             </div>
           </div>
-
-          {/* Configurable SLA Targets Policy Manager */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Settings className="w-4 h-4 text-sky-600" />
-                Configurable SLA Targets
-              </h3>
-            </div>
-            <div className="space-y-3">
-              {slaConfigs.map((sla) => (
-                <div
-                  key={sla.priority}
-                  className="p-2.5 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between text-xs"
-                >
-                  <div>
-                    <span className="font-bold text-slate-800">{sla.priority}: </span>
-                    <span className="font-mono text-sky-700 font-semibold">
-                      {sla.target_minutes < 60
-                        ? `${sla.target_minutes} min`
-                        : `${sla.target_minutes / 60} hr${sla.target_minutes > 60 ? 's' : ''}`}
-                    </span>
-                    <p className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[180px]">
-                      {sla.description}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleEditSla(sla)}
-                    className="p-1.5 text-slate-500 hover:text-sky-600 hover:bg-white rounded-lg transition"
-                    title="Edit SLA Target"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* Global Incident Table */}
+        {/* Recent Incidents Table */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900">All System Incidents</h2>
-            <span className="text-xs text-slate-500">Showing up to 100 recent incidents</span>
+            <h2 className="text-base font-bold text-slate-900">Recent System Incidents</h2>
+            <Link to="/admin/incidents" className="text-xs text-sky-600 hover:text-sky-800 font-semibold">
+              View All &rarr;
+            </Link>
           </div>
           <TicketTable
-            tickets={tickets}
+            tickets={recentIncidents}
             loading={loading}
             showAssignee={true}
           />
         </div>
-
-        {/* SLA Edit Modal */}
-        {editingPriority && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
-              <h3 className="text-base font-bold text-slate-900 mb-2">
-                Configure SLA Target for {editingPriority}
-              </h3>
-              <p className="text-xs text-slate-500 mb-4">
-                Update the target resolution window in minutes. New incidents will inherit this policy.
-              </p>
-
-              <form onSubmit={handleSaveSla} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase">
-                    Target Resolution (Minutes)
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    value={targetMinutes}
-                    onChange={(e) => setTargetMinutes(e.target.value)}
-                    className="mt-1 block w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase">
-                    Policy Description
-                  </label>
-                  <input
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="mt-1 block w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditingPriority(null)}
-                    className="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingSla}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    Save Target
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 };
 

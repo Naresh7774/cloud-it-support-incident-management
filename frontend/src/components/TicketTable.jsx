@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import PriorityBadge from './PriorityBadge';
 import StatusBadge from './StatusBadge';
 import SlaTimer from './SlaTimer';
@@ -12,6 +13,7 @@ const TicketTable = ({
   showAssignee = true,
   emptyMessage = 'No tickets match the selected filters.',
 }) => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
@@ -118,16 +120,18 @@ const TicketTable = ({
                 </td>
               </tr>
             ) : (
-              filteredTickets.map((t) => (
+              filteredTickets.map((t) => {
+                const incidentLink = `/${user?.role || 'user'}/incidents/${t.id}`;
+                return (
                 <tr key={t.id} className="hover:bg-slate-50/75 transition">
                   <td className="px-5 py-4 font-mono font-semibold text-xs text-sky-700">
-                    <Link to={`/tickets/${t.id}`} className="hover:underline">
+                    <Link to={incidentLink} className="hover:underline">
                       {t.ticket_number}
                     </Link>
                   </td>
                   <td className="px-5 py-4">
                     <div className="font-medium text-slate-900 max-w-xs md:max-w-md truncate">
-                      <Link to={`/tickets/${t.id}`} className="hover:text-sky-600">
+                      <Link to={incidentLink} className="hover:text-sky-600">
                         {t.title}
                       </Link>
                     </div>
@@ -160,7 +164,7 @@ const TicketTable = ({
                   )}
                   <td className="px-5 py-4 text-right">
                     <Link
-                      to={`/tickets/${t.id}`}
+                      to={incidentLink}
                       className="inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:text-sky-800 hover:bg-sky-50 px-2.5 py-1.5 rounded-md transition"
                     >
                       View
@@ -168,7 +172,8 @@ const TicketTable = ({
                     </Link>
                   </td>
                 </tr>
-              ))
+              );
+              })
             )}
           </tbody>
         </table>

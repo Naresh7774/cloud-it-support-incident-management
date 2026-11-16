@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
+import AppLayout from '../components/AppLayout';
 import { userApi } from '../api/userApi';
 import { useAuth } from '../context/AuthContext';
-import { Users, Search, Shield, UserCheck, AlertCircle } from 'lucide-react';
+import { Users, Search, AlertCircle, RefreshCw } from 'lucide-react';
 
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
@@ -53,22 +53,32 @@ const UserManagement = () => {
     if (!searchTerm) return true;
     return (
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase())
+      u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (u.department && u.department.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16">
-      <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <AppLayout>
+      <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">User & Role Management</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
+              <Users className="w-6 h-6 text-sky-600" />
+              User & Role Management
+            </h1>
             <p className="text-sm text-slate-500 mt-1">
               Assign roles, control administrative privileges, and manage engineer team memberships.
             </p>
           </div>
+
+          <button
+            onClick={fetchUsers}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh Directory
+          </button>
         </div>
 
         {/* Filters Toolbar */}
@@ -77,7 +87,7 @@ const UserManagement = () => {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by name or email..."
+              placeholder="Search by name, email or department..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -106,6 +116,7 @@ const UserManagement = () => {
                 <tr>
                   <th className="px-5 py-3.5">User</th>
                   <th className="px-5 py-3.5">Email</th>
+                  <th className="px-5 py-3.5">Department</th>
                   <th className="px-5 py-3.5">Current Role</th>
                   <th className="px-5 py-3.5">Change Role</th>
                   <th className="px-5 py-3.5">Registered Date</th>
@@ -114,14 +125,14 @@ const UserManagement = () => {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-12 text-center text-slate-400">
+                    <td colSpan={6} className="px-5 py-12 text-center text-slate-400">
                       <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
                       <p className="mt-2 text-xs">Loading user directory...</p>
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-12 text-center text-slate-400">
+                    <td colSpan={6} className="px-5 py-12 text-center text-slate-400">
                       <AlertCircle className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                       <p className="font-medium text-slate-600">No users found matching query.</p>
                     </td>
@@ -138,6 +149,7 @@ const UserManagement = () => {
                         )}
                       </td>
                       <td className="px-5 py-4 text-xs font-mono text-slate-600">{u.email}</td>
+                      <td className="px-5 py-4 text-xs text-slate-600">{u.department || 'General IT'}</td>
                       <td className="px-5 py-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
@@ -163,7 +175,7 @@ const UserManagement = () => {
                           <option value="admin">Administrator</option>
                         </select>
                       </td>
-                      <td className="px-5 py-4 text-xs text-slate-500">
+                      <td className="px-5 py-4 text-xs text-slate-500 font-mono">
                         {new Date(u.created_at).toLocaleDateString()}
                       </td>
                     </tr>
@@ -173,8 +185,8 @@ const UserManagement = () => {
             </table>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 };
 

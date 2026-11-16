@@ -9,6 +9,13 @@ const router = express.Router();
 
 router.use(authenticateToken);
 
+// User Profile routes (all roles)
+router.get('/profile', userController.getProfile);
+router.put('/profile', userController.updateProfile);
+
+// Engineer history route
+router.get('/history', authorizeRoles('engineer', 'admin'), userController.getEngineerHistory);
+
 // List users (Admins see all; Engineers can query engineers for assignment)
 router.get(
   '/',

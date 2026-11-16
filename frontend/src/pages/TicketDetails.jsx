@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
+import AppLayout from '../components/AppLayout';
 import PriorityBadge from '../components/PriorityBadge';
 import StatusBadge from '../components/StatusBadge';
 import SlaTimer from '../components/SlaTimer';
@@ -96,7 +96,6 @@ const TicketDetails = () => {
         setComments((prev) => [...prev, res.data.comment]);
         setNewComment('');
         setIsInternal(false);
-        // Refresh history
         fetchTicketData();
       }
     } catch (err) {
@@ -182,30 +181,28 @@ const TicketDetails = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar />
-        <div className="flex justify-center items-center h-[70vh]">
+      <AppLayout>
+        <div className="flex justify-center items-center h-[60vh]">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sky-600"></div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (error || !ticket) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar />
-        <main className="max-w-4xl mx-auto px-4 py-12 text-center">
+      <AppLayout>
+        <div className="max-w-4xl mx-auto px-4 py-12 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-          <h2 className="text-xl font-bold text-slate-900">{error || 'Ticket not found'}</h2>
+          <h2 className="text-xl font-bold text-slate-900">{error || 'Incident record not found'}</h2>
           <button
             onClick={() => navigate(-1)}
-            className="mt-4 px-4 py-2 bg-sky-600 text-white rounded-lg text-sm font-semibold"
+            className="mt-4 px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold"
           >
-            Return to Dashboard
+            Return Back
           </button>
-        </main>
-      </div>
+        </div>
+      </AppLayout>
     );
   }
 
@@ -213,21 +210,10 @@ const TicketDetails = () => {
   const isOwner = ticket.created_by === user?.id;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16">
-      <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Navigation Bar */}
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 mb-6 transition"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Overview
-        </button>
-
-        {/* Header Hero */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+    <AppLayout>
+      <div className="space-y-6">
+        {/* Header Hero Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -244,19 +230,19 @@ const TicketDetails = () => {
               </div>
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{ticket.title}</h1>
               <p className="text-xs text-slate-500 mt-1">
-                Category: <span className="font-semibold text-slate-700">{ticket.category}</span> • Raised by{' '}
-                <span className="font-semibold text-slate-700">{ticket.creator_name}</span> (
+                Category: <strong className="text-slate-700">{ticket.category}</strong> • Created by{' '}
+                <strong className="text-slate-700">{ticket.creator_name}</strong> (
                 {ticket.creator_email}) on {new Date(ticket.created_at).toLocaleString()}
               </p>
             </div>
 
-            {/* Quick Actions for Support Staff */}
+            {/* Quick Actions for Staff */}
             <div className="flex flex-wrap items-center gap-2">
               {/* Accept & Self-Assign (Engineer) */}
               {user?.role === 'engineer' && ticket.assigned_to !== user?.id && ticket.status !== 'Closed' && (
                 <button
                   onClick={() => handleAssign(user.id)}
-                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
                 >
                   Accept & Assign to Me
                 </button>
@@ -267,7 +253,7 @@ const TicketDetails = () => {
                 <button
                   onClick={() => handleStatusChange('In Progress')}
                   disabled={updatingStatus}
-                  className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                  className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
                 >
                   Start Progress
                 </button>
@@ -277,7 +263,7 @@ const TicketDetails = () => {
                 <button
                   onClick={() => handleStatusChange('Resolved')}
                   disabled={updatingStatus}
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
                 >
                   Resolve Incident
                 </button>
@@ -288,9 +274,9 @@ const TicketDetails = () => {
                 <button
                   onClick={() => handleStatusChange('Closed')}
                   disabled={updatingStatus}
-                  className="px-3.5 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold shadow-sm transition"
                 >
-                  Close Incident
+                  Confirm & Close Incident
                 </button>
               )}
             </div>
@@ -298,22 +284,22 @@ const TicketDetails = () => {
         </div>
 
         {/* Content Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Column: Details, Resolution Notes, Comments */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Incident Description */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Description */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">
-                Incident Description
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">
+                Incident Description & Impact
               </h2>
-              <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 font-sans">
                 {ticket.description}
               </div>
 
               {/* Resolution Notes Banner (if present) */}
               {ticket.resolution_notes && (
                 <div className="mt-5 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900">
-                  <div className="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider text-emerald-800 mb-1">
+                  <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-emerald-800 mb-1">
                     <CheckCircle className="w-4 h-4 text-emerald-600" />
                     Resolution Summary
                   </div>
@@ -356,7 +342,7 @@ const TicketDetails = () => {
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-xs text-slate-900">
+                          <span className="font-bold text-xs text-slate-900">
                             {c.author_name}
                           </span>
                           <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
@@ -386,27 +372,27 @@ const TicketDetails = () => {
                   required
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Type an update, resolution step, or comment..."
+                  placeholder="Type an update, triage question, or resolution step..."
                   className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   {isStaff ? (
-                    <label className="flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={isInternal}
                         onChange={(e) => setIsInternal(e.target.checked)}
                         className="rounded text-sky-600 focus:ring-sky-500"
                       />
-                      <span>Internal staff note (hidden from end-user)</span>
+                      <span>Internal staff note (hidden from customer)</span>
                     </label>
                   ) : <div />}
 
                   <button
                     type="submit"
                     disabled={submittingComment}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-semibold shadow-sm disabled:opacity-50 transition"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold shadow-sm disabled:opacity-50 transition"
                   >
                     <Send className="w-3.5 h-3.5" />
                     Post Comment
@@ -416,16 +402,16 @@ const TicketDetails = () => {
             </div>
           </div>
 
-          {/* Sidebar Column: Incident Metadata, Controls & Audit Log */}
+          {/* Sidebar Column: Controls, SLA Details & Audit Trail */}
           <div className="space-y-6">
-            {/* Incident Controls Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Incident Operations
-              </h3>
+            {/* Incident Controls Card (Staff) */}
+            {isStaff && (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Incident Operations
+                </h3>
 
-              {/* Status Picker (Staff) */}
-              {isStaff && (
+                {/* Status Picker */}
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Update Incident Status
@@ -434,7 +420,7 @@ const TicketDetails = () => {
                     value={ticket.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
                     disabled={updatingStatus}
-                    className="w-full text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="w-full text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:ring-2 focus:ring-sky-500"
                   >
                     <option value="Open">Open</option>
                     <option value="Assigned">Assigned</option>
@@ -443,10 +429,8 @@ const TicketDetails = () => {
                     <option value="Closed">Closed</option>
                   </select>
                 </div>
-              )}
 
-              {/* Priority Picker (Staff) */}
-              {isStaff && (
+                {/* Priority Picker */}
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Adjust Priority (Recalculates SLA)
@@ -454,7 +438,7 @@ const TicketDetails = () => {
                   <select
                     value={ticket.priority}
                     onChange={(e) => handlePriorityChange(e.target.value)}
-                    className="w-full text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="w-full text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:ring-2 focus:ring-sky-500"
                   >
                     <option value="Critical">Critical (15m SLA)</option>
                     <option value="High">High (1h SLA)</option>
@@ -462,10 +446,8 @@ const TicketDetails = () => {
                     <option value="Low">Low (8h SLA)</option>
                   </select>
                 </div>
-              )}
 
-              {/* Engineer Assignment (Admin or Staff) */}
-              {isStaff && (
+                {/* Engineer Assignment */}
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Assign Support Engineer
@@ -473,7 +455,7 @@ const TicketDetails = () => {
                   <select
                     value={ticket.assigned_to || ''}
                     onChange={(e) => handleAssign(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="w-full text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:ring-2 focus:ring-sky-500"
                   >
                     <option value="">Unassigned</option>
                     {engineers.map((eng) => (
@@ -483,8 +465,8 @@ const TicketDetails = () => {
                     ))}
                   </select>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Metadata Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3.5">
@@ -507,14 +489,14 @@ const TicketDetails = () => {
               </div>
 
               <div className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
-                <span className="text-slate-500">Created:</span>
+                <span className="text-slate-500">Created Timestamp:</span>
                 <span className="text-slate-700">
-                  {new Date(ticket.created_at).toLocaleDateString()}
+                  {new Date(ticket.created_at).toLocaleString()}
                 </span>
               </div>
 
               <div className="flex items-center justify-between text-xs py-1">
-                <span className="text-slate-500">Last Modified:</span>
+                <span className="text-slate-500">Last Updated:</span>
                 <span className="text-slate-700">
                   {new Date(ticket.updated_at).toLocaleTimeString()}
                 </span>
@@ -530,7 +512,7 @@ const TicketDetails = () => {
                 </h3>
               </div>
 
-              <div className="flow-root max-h-96 overflow-y-auto pr-2">
+              <div className="flow-root max-h-80 overflow-y-auto pr-2">
                 <ul className="-mb-8">
                   {history.map((event, idx) => (
                     <li key={event.id}>
@@ -550,8 +532,8 @@ const TicketDetails = () => {
                           <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
                             <div>
                               <p className="text-xs text-slate-700 font-medium">
-                                <span className="font-bold text-slate-900">{event.actor_name}</span>{' '}
-                                performed <span className="font-semibold text-sky-700">{event.action}</span>
+                                <strong className="text-slate-900">{event.actor_name}</strong>{' '}
+                                performed <span className="font-bold text-sky-700">{event.action}</span>
                               </p>
                               {event.old_value && event.new_value && (
                                 <p className="text-[11px] text-slate-500 mt-0.5">
@@ -564,7 +546,7 @@ const TicketDetails = () => {
                                 </p>
                               )}
                             </div>
-                            <div className="text-right text-[10px] whitespace-nowrap text-slate-400">
+                            <div className="text-right text-[10px] whitespace-nowrap text-slate-400 font-mono">
                               {new Date(event.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </div>
@@ -593,7 +575,7 @@ const TicketDetails = () => {
                   required
                   value={resolutionNotes}
                   onChange={(e) => setResolutionNotes(e.target.value)}
-                  placeholder="e.g. Cleared deadlock in connection pool, rolled back deployment v1.2, or updated DNS configuration..."
+                  placeholder="e.g. Cleared deadlock in connection pool, scaled IOPS, or deployed DNS fix..."
                   className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
 
@@ -608,7 +590,7 @@ const TicketDetails = () => {
                   <button
                     type="submit"
                     disabled={updatingStatus}
-                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition"
                   >
                     Confirm Resolution
                   </button>
@@ -617,8 +599,8 @@ const TicketDetails = () => {
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 };
 
