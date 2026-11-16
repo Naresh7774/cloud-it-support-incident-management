@@ -1,0 +1,112 @@
+services:
+  # 1. MySQL Database Service
+  mysql:
+    image: mysql:8.0
+    container_name: incident_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_secure_password_2026}
+      MYSQL_DATABASE: ${DB_NAME:-incident_management}
+      MYSQL_USER: ${DB_USER:-incident_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-incident_pass_change_in_prod}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - app-network
+    # Do not expose port 3306 to host for security
+
+  # 2. Express.js REST API Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: incident_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 5000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-incident_user}
+      DB_PASSWORD: ${DB_PASSWORD:-incident_pass_change_in_prod}
+      DB_NAME: ${DB_NAME:-incident_management}
+      JWT_SECRET: ${JWT_SECRET:-cloud_incident_super_secret_jwt_key_2026_change_me}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,http://localhost:80}
+      ENABLE_CLOUDWATCH: ${ENABLE_CLOUDWATCH:-false}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      CLOUDWATCH_LOG_GROUP: ${CLOUDWATCH_LOG_GROUP:-/aws/ec2/cloud-incident-management}
+      CLOUDWATCH_LOG_STREAM: ${CLOUDWATCH_LOG_STREAM:-docker-app-stream}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - backend_logs:/usr/src/app/logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - app-network
+
+  # 3. React.js Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: incident_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:80/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - app-network
+
+  # 4. Nginx Reverse Proxy Service
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: incident_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:80/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+    driver: local
+  backend_logs:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
