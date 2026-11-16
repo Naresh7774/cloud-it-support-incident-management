@@ -136,21 +136,22 @@ const UserDashboard = () => {
         </div>
 
         {/* Quick Raise Banner */}
-        <div className="bg-gradient-to-r from-brand-primary to-blue-700 rounded-2xl p-6 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-blue-400/20">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20 backdrop-blur-md">
+        <div className="bg-gradient-to-r from-navy-950 via-dark-card to-navy-950 rounded-2xl p-6 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-brand-primary/30 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+          <div className="space-y-1 relative z-10">
+            <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
               <Sparkles className="w-3 h-3 text-cyan-300" />
               Rapid Assistance
             </div>
             <h3 className="text-lg font-bold text-white">Experiencing a service interruption?</h3>
-            <p className="text-xs text-blue-100 max-w-xl leading-relaxed">
+            <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
               Log an incident with high severity to instantly notify on-call support engineers. Target resolution SLA applies automatically based on priority.
             </p>
           </div>
 
           <Link
             to="/user/create-incident"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-navy-950 font-extrabold text-xs rounded-xl shadow-lg hover:bg-slate-100 transition flex-shrink-0"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white font-extrabold text-xs rounded-xl shadow-lg hover:bg-brand-primaryHover transition flex-shrink-0 relative z-10"
           >
             Create Ticket Now
             <ArrowRight className="w-3.5 h-3.5" />

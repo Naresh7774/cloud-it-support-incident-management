@@ -5,10 +5,11 @@
 @layer base {
   html {
     color-scheme: dark;
+    background-color: #0B1220;
   }
   body {
-    background-color: #0B1220;
-    color: #F8FAFC;
+    background-color: #0B1220 !important;
+    color: #F8FAFC !important;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -16,9 +17,50 @@
   }
 
   ::selection {
-    background-color: rgba(22, 119, 232, 0.3);
+    background-color: rgba(22, 119, 232, 0.35);
     color: #FFFFFF;
   }
+}
+
+/* Core Dark Blue Charcoal Utility Guarantees */
+:root {
+  --bg-navy-900: #0B1220;
+  --bg-navy-950: #070D18;
+  --bg-dark-card: #131E31;
+  --bg-dark-surface: #1A2840;
+  --border-dark-border: #23354E;
+}
+
+.bg-navy-900 {
+  background-color: #0B1220 !important;
+}
+
+.bg-navy-950 {
+  background-color: #070D18 !important;
+}
+
+.bg-navy-950\/80 {
+  background-color: rgba(7, 13, 24, 0.85) !important;
+}
+
+.bg-dark-card {
+  background-color: #131E31 !important;
+}
+
+.bg-dark-surface {
+  background-color: #1A2840 !important;
+}
+
+.border-dark-border {
+  border-color: #23354E !important;
+}
+
+.text-dark-muted {
+  color: #94A3B8 !important;
+}
+
+.text-dark-light {
+  color: #F8FAFC !important;
 }
 
 /* Custom dark scrollbars */
@@ -28,16 +70,16 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #080F1C;
+  background: #070D18;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #24334A;
+  background: #23354E;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334766;
+  background: #334B6E;
 }
 
 /* Smooth transitions */
