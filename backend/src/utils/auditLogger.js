@@ -23,7 +23,7 @@ const recordHistory = async ({
 }) => {
   const query = `
     INSERT INTO ticket_history (ticket_id, user_id, action, old_value, new_value, notes, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, NOW())
+    VALUES (?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())
   `;
   const values = [ticketId, userId, action, oldValue, newValue, notes];
 
@@ -40,7 +40,6 @@ const recordHistory = async ({
       notes
     });
   } catch (err) {
-    // Audit failure should not break the main transaction if DB connection is mock or non-fatal
     console.error('Failed to record ticket history:', err.message);
   }
 };

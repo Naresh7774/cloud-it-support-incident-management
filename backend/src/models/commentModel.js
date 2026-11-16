@@ -4,7 +4,7 @@ const commentModel = {
   async create({ ticketId, userId, comment, isInternal = false }) {
     const [result] = await pool.execute(
       `INSERT INTO ticket_comments (ticket_id, user_id, comment, is_internal, created_at)
-       VALUES (?, ?, ?, ?, NOW())`,
+       VALUES (?, ?, ?, ?, UTC_TIMESTAMP())`,
       [ticketId, userId, comment, isInternal ? 1 : 0]
     );
 

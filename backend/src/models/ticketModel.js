@@ -29,7 +29,7 @@ const ticketModel = {
     const [result] = await pool.execute(
       `INSERT INTO tickets 
         (ticket_number, title, description, category, priority, status, created_by, assigned_to, sla_deadline, is_overdue, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 'Open', ?, ?, ?, 0, NOW(), NOW())`,
+       VALUES (?, ?, ?, ?, ?, 'Open', ?, ?, ?, 0, UTC_TIMESTAMP(), UTC_TIMESTAMP())`,
       [ticketNumber, title, description, category, priority, createdBy, assignedTo, formattedDeadline]
     );
 
@@ -39,7 +39,7 @@ const ticketModel = {
   async findById(id) {
     const query = `
       SELECT t.*,
-             (t.status NOT IN ('Resolved', 'Closed') AND NOW() > t.sla_deadline) as is_overdue_dynamic,
+             (t.status NOT IN ('Resolved', 'Closed') AND UTC_TIMESTAMP() > t.sla_deadline) as is_overdue_dynamic,
              creator.name as creator_name, creator.email as creator_email, creator.role as creator_role,
              assignee.name as assignee_name, assignee.email as assignee_email, assignee.role as assignee_role
       FROM tickets t
@@ -69,7 +69,7 @@ const ticketModel = {
   } = {}) {
     let query = `
       SELECT t.*,
-             (t.status NOT IN ('Resolved', 'Closed') AND NOW() > t.sla_deadline) as is_overdue_dynamic,
+             (t.status NOT IN ('Resolved', 'Closed') AND UTC_TIMESTAMP() > t.sla_deadline) as is_overdue_dynamic,
              creator.name as creator_name, creator.email as creator_email,
              assignee.name as assignee_name, assignee.email as assignee_email
       FROM tickets t
@@ -119,7 +119,7 @@ const ticketModel = {
     }
 
     if (isOverdue === true || isOverdue === 'true') {
-      query += " AND t.status NOT IN ('Resolved', 'Closed') AND NOW() > t.sla_deadline";
+      query += " AND t.status NOT IN ('Resolved', 'Closed') AND UTC_TIMESTAMP() > t.sla_deadline";
     }
 
     query += ' ORDER BY CASE t.priority WHEN "Critical" THEN 1 WHEN "High" THEN 2 WHEN "Medium" THEN 3 ELSE 4 END, t.created_at DESC';
@@ -164,7 +164,7 @@ const ticketModel = {
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
     if (isOverdue === true || isOverdue === 'true') {
-      query += " AND t.status NOT IN ('Resolved', 'Closed') AND NOW() > t.sla_deadline";
+      query += " AND t.status NOT IN ('Resolved', 'Closed') AND UTC_TIMESTAMP() > t.sla_deadline";
     }
 
     const [rows] = await pool.query(query, params);
@@ -172,7 +172,7 @@ const ticketModel = {
   },
 
   async updateStatus(id, { status, resolutionNotes = null, resolvedAt = null, closedAt = null }) {
-    let query = 'UPDATE tickets SET status = ?, updated_at = NOW()';
+    let query = 'UPDATE tickets SET status = ?, updated_at = UTC_TIMESTAMP()';
     const params = [status];
 
     if (resolutionNotes !== null && resolutionNotes !== undefined) {
@@ -202,7 +202,7 @@ const ticketModel = {
       `UPDATE tickets 
        SET assigned_to = ?, 
            status = CASE WHEN status = 'Open' AND ? IS NOT NULL THEN 'Assigned' ELSE status END,
-           updated_at = NOW() 
+           updated_at = UTC_TIMESTAMP() 
        WHERE id = ?`,
       [assignedTo, assignedTo, id]
     );
@@ -212,7 +212,7 @@ const ticketModel = {
   async updatePriority(id, priority, newSlaDeadline) {
     const formattedDeadline = new Date(newSlaDeadline).toISOString().slice(0, 19).replace('T', ' ');
     const [result] = await pool.execute(
-      'UPDATE tickets SET priority = ?, sla_deadline = ?, updated_at = NOW() WHERE id = ?',
+      'UPDATE tickets SET priority = ?, sla_deadline = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?',
       [priority, formattedDeadline, id]
     );
     return result.affectedRows > 0;
@@ -239,7 +239,7 @@ const ticketModel = {
         SUM(CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END) as in_progress,
         SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) as resolved,
         SUM(CASE WHEN status = 'Closed' THEN 1 ELSE 0 END) as closed,
-        SUM(CASE WHEN status NOT IN ('Resolved', 'Closed') AND NOW() > sla_deadline THEN 1 ELSE 0 END) as overdue,
+        SUM(CASE WHEN status NOT IN ('Resolved', 'Closed') AND UTC_TIMESTAMP() > sla_deadline THEN 1 ELSE 0 END) as overdue,
         SUM(CASE WHEN priority = 'Critical' AND status NOT IN ('Resolved', 'Closed') THEN 1 ELSE 0 END) as critical_active
       FROM tickets
       WHERE ${baseWhere}
