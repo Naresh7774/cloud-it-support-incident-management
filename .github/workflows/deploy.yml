@@ -16,9 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ===============================================================
   # Stage 1: Continuous Integration - Lint, Test & Static Builds
-  # ===============================================================
+
   ci-test-and-build:
     name: Test & Build Artifacts
     runs-on: ubuntu-latest
@@ -104,9 +103,9 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-  # ===============================================================
-  # Stage 3: Continuous Deployment - Deploy to AWS EC2
-  # ===============================================================
+  
+#  Stage 3: Continuous Deployment - Deploy to AWS EC2
+  
   deploy-to-ec2:
     name: Deploy Application to AWS EC2
     needs: build-and-push-ecr
