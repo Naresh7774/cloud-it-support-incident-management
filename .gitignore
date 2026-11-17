@@ -35,3 +35,22 @@ Thumbs.db
 
 # Coverage & Tests
 coverage/
+
+
+# Environment files
+.env.*
+!.env.example
+
+# Database dumps & backups
+backups/
+*.dump
+*.sql.gz
+!database/*.sql
+
+# Temporary files
+.tmp/
+temp/
+
+# Private keys and certificates
+*.pem
+*.key
