@@ -39,4 +39,15 @@ router.put(
   userController.updateUserRole
 );
 
+// Delete user permanently (Admin only)
+router.delete(
+  '/:id',
+  authorizeRoles('admin'),
+  [
+    param('id').isInt().withMessage('User ID must be an integer'),
+    validateRequest
+  ],
+  userController.deleteUser
+);
+
 module.exports = router;

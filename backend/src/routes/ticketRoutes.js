@@ -95,4 +95,27 @@ router.post(
   commentController.addComment
 );
 
+// 8. Delete comment from ticket (Admin only)
+router.delete(
+  '/:ticketId/comments/:commentId',
+  authorizeRoles('admin'),
+  [
+    param('ticketId').notEmpty().withMessage('Ticket ID is required'),
+    param('commentId').isInt().withMessage('Comment ID must be an integer'),
+    validateRequest
+  ],
+  commentController.deleteComment
+);
+
+// 9. Delete ticket permanently (Admin only)
+router.delete(
+  '/:id',
+  authorizeRoles('admin'),
+  [
+    param('id').notEmpty().withMessage('Ticket ID is required'),
+    validateRequest
+  ],
+  ticketController.deleteTicket
+);
+
 module.exports = router;

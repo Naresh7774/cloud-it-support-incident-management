@@ -8,4 +8,6 @@ export const ticketApi = {
   assignTicket: (id, engineerId) => axiosClient.put(`/tickets/${id}/assign`, { engineerId }),
   updatePriority: (id, priority) => axiosClient.put(`/tickets/${id}/priority`, { priority }),
   addComment: (id, data) => axiosClient.post(`/tickets/${id}/comments`, data),
+  deleteComment: (ticketId, commentId) => axiosClient.delete(`/tickets/${ticketId}/comments/${commentId}`),
+  deleteTicket: (id) => axiosClient.delete(`/tickets/${id}`),
 };

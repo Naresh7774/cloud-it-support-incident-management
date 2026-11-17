@@ -418,6 +418,40 @@ const ticketController = {
     } catch (err) {
       next(err);
     }
+  },
+
+  /**
+   * Delete an incident ticket (Admin only)
+   */
+  async deleteTicket(req, res, next) {
+    try {
+      const { id } = req.params;
+      const ticket = await ticketModel.findById(id);
+
+      if (!ticket) {
+        return res.status(404).json({
+          success: false,
+          message: 'Incident ticket not found.'
+        });
+      }
+
+      await ticketModel.delete(ticket.id);
+
+      logEvent('TICKET_DELETED', {
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticket_number,
+        title: ticket.title,
+        deletedBy: req.user.id,
+        adminEmail: req.user.email
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `Incident ${ticket.ticket_number} ("${ticket.title}") has been permanently deleted.`
+      });
+    } catch (err) {
+      next(err);
+    }
   }
 };
 

@@ -77,6 +77,38 @@ const commentController = {
     } catch (err) {
       next(err);
     }
+  },
+
+  /**
+   * Delete comment (Admin only)
+   */
+  async deleteComment(req, res, next) {
+    try {
+      const { ticketId, commentId } = req.params;
+
+      const comment = await commentModel.findById(commentId);
+      if (!comment || String(comment.ticket_id) !== String(ticketId)) {
+        return res.status(404).json({
+          success: false,
+          message: 'Comment not found for this ticket.'
+        });
+      }
+
+      await commentModel.delete(comment.id);
+
+      logEvent('COMMENT_DELETED', {
+        ticketId,
+        commentId,
+        deletedBy: req.user.id
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Comment successfully deleted.'
+      });
+    } catch (err) {
+      next(err);
+    }
   }
 };
 

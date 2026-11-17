@@ -36,6 +36,16 @@ const commentModel = {
 
     const [rows] = await pool.execute(query, params);
     return rows;
+  },
+
+  async findById(id) {
+    const [rows] = await pool.execute('SELECT * FROM ticket_comments WHERE id = ?', [id]);
+    return rows[0] || null;
+  },
+
+  async delete(id) {
+    const [result] = await pool.execute('DELETE FROM ticket_comments WHERE id = ?', [id]);
+    return result.affectedRows > 0;
   }
 };
 

@@ -192,6 +192,48 @@ const userController = {
     } catch (err) {
       next(err);
     }
+  },
+
+  /**
+   * Delete user (Admin only)
+   */
+  async deleteUser(req, res, next) {
+    try {
+      const { id } = req.params;
+      const targetUserId = parseInt(id, 10);
+
+      if (req.user.id === targetUserId) {
+        return res.status(400).json({
+          success: false,
+          message: 'You cannot delete your own administrator account.'
+        });
+      }
+
+      const user = await userModel.findById(targetUserId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found.'
+        });
+      }
+
+      // Reassign user's created tickets to the deleting admin to preserve incident data
+      await userModel.delete(targetUserId, req.user.id);
+
+      logEvent('USER_DELETED', {
+        deletedUserId: targetUserId,
+        deletedEmail: user.email,
+        deletedRole: user.role,
+        deletedBy: req.user.id
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `User ${user.name} (${user.email}) has been permanently deleted.`
+      });
+    } catch (err) {
+      next(err);
+    }
   }
 };
 

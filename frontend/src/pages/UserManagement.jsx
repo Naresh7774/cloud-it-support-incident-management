@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Mail,
   Building,
+  Trash2,
 } from 'lucide-react';
 
 const UserManagement = () => {
@@ -24,6 +25,8 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchUsers = async (isManual = false) => {
     setLoading(true);
@@ -67,6 +70,30 @@ const UserManagement = () => {
       toast.error(typeof err === 'string' ? err : 'Failed to update user role.');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+
+    if (deleteTarget.id === currentUser?.id) {
+      toast.error('You cannot delete your own administrator account.');
+      setDeleteTarget(null);
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await userApi.deleteUser(deleteTarget.id);
+      if (res.success) {
+        setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+        toast.success(`User ${deleteTarget.name} has been permanently deleted.`);
+        setDeleteTarget(null);
+      }
+    } catch (err) {
+      toast.error(typeof err === 'string' ? err : 'Failed to delete user.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -239,6 +266,18 @@ const UserManagement = () => {
                               <option value="engineer" className="bg-navy-950 text-white">Role: Support Engineer</option>
                               <option value="admin" className="bg-navy-950 text-white">Role: Administrator</option>
                             </select>
+
+                            {/* Delete User Button (Admin only, cannot delete self) */}
+                            {!isSelf && (
+                              <button
+                                onClick={() => setDeleteTarget(u)}
+                                disabled={isUpdating}
+                                className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg border border-transparent hover:border-rose-500/30 transition disabled:opacity-30"
+                                title={`Delete user ${u.name}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -249,6 +288,61 @@ const UserManagement = () => {
             </table>
           </div>
         </div>
+
+        {/* Delete User Confirmation Modal */}
+        {deleteTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/80 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-dark-card border border-rose-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+              <div className="flex items-center gap-3 text-rose-400">
+                <div className="p-3 bg-rose-500/10 rounded-xl border border-rose-500/20">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Delete User Account</h3>
+                  <p className="text-xs text-rose-300">Permanent administrator action</p>
+                </div>
+              </div>
+
+              <div className="text-xs text-slate-300 space-y-2 bg-navy-900 p-3.5 rounded-xl border border-dark-border">
+                <p>
+                  Are you sure you want to permanently delete user <strong className="text-white">{deleteTarget.name}</strong> ({deleteTarget.email})?
+                </p>
+                <p className="text-slate-400 text-[11px]">
+                  All user profile data will be permanently wiped. Any active support tickets will be preserved and reassigned to your administrator account.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                  className="px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-dark-surface hover:bg-dark-hover border border-dark-border rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteUser}
+                  disabled={deleting}
+                  className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded-xl shadow-lg shadow-rose-600/20 transition flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-2 border-white/20 border-b-white" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Permanently Delete
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

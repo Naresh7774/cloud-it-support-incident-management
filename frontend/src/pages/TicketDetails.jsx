@@ -26,6 +26,7 @@ import {
   FileText,
   AlertOctagon,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react';
 
 const TicketDetails = () => {
@@ -51,6 +52,11 @@ const TicketDetails = () => {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  // Admin delete states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingTicket, setDeletingTicket] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState(null);
 
   const fetchTicketData = async () => {
     try {
@@ -188,6 +194,37 @@ const TicketDetails = () => {
     }
   };
 
+  const handleDeleteTicket = async () => {
+    setDeletingTicket(true);
+    try {
+      const res = await ticketApi.deleteTicket(ticket.id);
+      if (res.success) {
+        toast.success(res.message || 'Incident deleted permanently.');
+        setShowDeleteModal(false);
+        const redirectPath = user?.role === 'admin' ? '/admin/incidents' : '/user/incidents';
+        navigate(redirectPath, { replace: true });
+      }
+    } catch (err) {
+      toast.error(typeof err === 'string' ? err : 'Failed to delete incident.');
+      setDeletingTicket(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    setDeletingCommentId(commentId);
+    try {
+      const res = await ticketApi.deleteComment(ticket.id, commentId);
+      if (res.success) {
+        setComments((prev) => prev.filter((c) => c.id !== commentId));
+        toast.success('Comment deleted.');
+      }
+    } catch (err) {
+      toast.error(typeof err === 'string' ? err : 'Failed to delete comment.');
+    } finally {
+      setDeletingCommentId(null);
+    }
+  };
+
   if (loading) {
     return (
       <AppLayout>
@@ -290,6 +327,18 @@ const TicketDetails = () => {
                   Confirm & Close Incident
                 </button>
               )}
+
+              {/* Delete Incident (Admin Only) */}
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  disabled={deletingTicket}
+                  className="px-4 py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 rounded-xl text-xs font-bold shadow-md shadow-rose-600/10 transition flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Incident
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -364,9 +413,22 @@ const TicketDetails = () => {
                             </span>
                           )}
                         </div>
-                        <span className="text-[11px] text-dark-muted font-mono">
-                          {new Date(c.created_at).toLocaleString()}
-                        </span>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-[11px] text-dark-muted font-mono">
+                            {new Date(c.created_at).toLocaleString()}
+                          </span>
+                          {user?.role === 'admin' && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteComment(c.id)}
+                              disabled={deletingCommentId === c.id}
+                              className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition disabled:opacity-40"
+                              title="Delete comment"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <p className="whitespace-pre-wrap text-slate-300 text-xs sm:text-sm leading-relaxed">
                         {c.comment}
@@ -617,6 +679,61 @@ const TicketDetails = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Incident Confirmation Modal (Admin only) */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/80 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-dark-card border border-rose-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+              <div className="flex items-center gap-3 text-rose-400">
+                <div className="p-3 bg-rose-500/10 rounded-xl border border-rose-500/20">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Permanently Delete Incident</h3>
+                  <p className="text-xs text-rose-300">Administrator Authorization Required</p>
+                </div>
+              </div>
+
+              <div className="text-xs text-slate-300 space-y-2 bg-navy-900 p-3.5 rounded-xl border border-dark-border">
+                <p>
+                  Are you sure you want to permanently delete ticket <strong className="text-white font-mono">{ticket.ticket_number}</strong> ({ticket.title})?
+                </p>
+                <p className="text-slate-400 text-[11px]">
+                  All associated incident discussion notes, resolution logs, and SLA audit history will be permanently erased from MySQL. This action is irreversible.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deletingTicket}
+                  className="px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-dark-surface hover:bg-dark-hover border border-dark-border rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteTicket}
+                  disabled={deletingTicket}
+                  className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded-xl shadow-lg shadow-rose-600/20 transition flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {deletingTicket ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-2 border-white/20 border-b-white" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Permanently Delete Incident
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

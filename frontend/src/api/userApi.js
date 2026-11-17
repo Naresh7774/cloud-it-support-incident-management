@@ -6,4 +6,5 @@ export const userApi = {
   getProfile: () => axiosClient.get('/users/profile'),
   updateProfile: (data) => axiosClient.put('/users/profile', data),
   getEngineerHistory: () => axiosClient.get('/users/history'),
+  deleteUser: (id) => axiosClient.delete(`/users/${id}`),
 };

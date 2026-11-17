@@ -96,6 +96,37 @@ const userModel = {
       'SELECT role, COUNT(*) as count FROM users GROUP BY role'
     );
     return rows;
+  },
+
+  async delete(id, reassignTicketsToId = null) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // 1. Unassign from assigned tickets
+      await connection.execute('UPDATE tickets SET assigned_to = NULL WHERE assigned_to = ?', [id]);
+
+      // 2. Reassign created tickets to admin or delete
+      if (reassignTicketsToId) {
+        await connection.execute('UPDATE tickets SET created_by = ? WHERE created_by = ?', [reassignTicketsToId, id]);
+      } else {
+        await connection.execute('DELETE FROM tickets WHERE created_by = ?', [id]);
+      }
+
+      // 3. Delete notifications
+      await connection.execute('DELETE FROM notifications WHERE user_id = ?', [id]);
+
+      // 4. Delete user (comments and history CASCADE)
+      const [result] = await connection.execute('DELETE FROM users WHERE id = ?', [id]);
+
+      await connection.commit();
+      return result.affectedRows > 0;
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
   }
 };
 

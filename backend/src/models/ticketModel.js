@@ -286,6 +286,11 @@ const ticketModel = {
       byPriority: priorityRows,
       byCategory: categoryRows
     };
+  },
+
+  async delete(id) {
+    const [result] = await pool.execute('DELETE FROM tickets WHERE id = ?', [id]);
+    return result.affectedRows > 0;
   }
 };
 
